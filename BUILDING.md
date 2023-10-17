@@ -2,15 +2,15 @@
 
 First install Android Studio
 
+`export ANDROID_HOME=~/Android/Sdk
 `
-export ANDROID_HOME=~/Android/Sdk
-export PATH=~/android-studio/jbr/bin:$PATH
+`export PATH=~/android-studio/jbr/bin:$PATH
 `
 
 In sample directory:
 
+`./gradlew clean
 `
-./gradlew clean
-./gradlew assembleDebug
+`./gradlew assembleDebug
 `
 
