@@ -12,6 +12,9 @@ android {
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
+        ndk {
+	    abiFilters.add("arm64-v8a")
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -38,6 +41,7 @@ android {
         }
     }
     buildFeatures {
+        prefab = true
         viewBinding = true
     }
 }
@@ -50,4 +54,5 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    implementation("org.khronos.openxr:openxr_loader_for_android:1.0.30")
 }
