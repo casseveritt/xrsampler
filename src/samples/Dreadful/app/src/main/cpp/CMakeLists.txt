@@ -23,6 +23,7 @@ find_package(OpenXR REQUIRED CONFIG)
 
 # Configure libraries CMake uses to link your target library.
 target_link_libraries(dreadful
+
         # OpenXR loader support
         OpenXR::openxr_loader
 

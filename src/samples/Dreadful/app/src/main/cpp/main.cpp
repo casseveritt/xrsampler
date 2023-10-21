@@ -97,7 +97,7 @@ extern "C"
         // just return false...
         aout << "finish implementing this function" << std::endl;
         return false;
-        //return true;
+        // return true;
     }
 
     /*!
@@ -111,7 +111,8 @@ extern "C"
         // Register an event handler for Android events
         pApp->onAppCmd = handle_cmd;
 
-        if (!initOpenXR(pApp->activity->vm, pApp->activity->javaGameActivity)) {
+        if (!initOpenXR(pApp->activity->vm, pApp->activity->javaGameActivity))
+        {
             aout << "OpenXR initialization failed, exiting";
             return;
         }
