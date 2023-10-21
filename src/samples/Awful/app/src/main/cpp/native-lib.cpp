@@ -36,4 +36,5 @@ bool initOpenXR(JavaVM* vm, jobject ctx) {
         ii.applicationContext = ctx;
         auto result = xrInitializeLoaderKHR(reinterpret_cast<XrLoaderInitInfoBaseHeaderKHR*>(&ii));
     }
+    return true;
 }
