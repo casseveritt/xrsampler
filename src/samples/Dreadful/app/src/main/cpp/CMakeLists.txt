@@ -18,8 +18,14 @@ add_library(dreadful SHARED
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)
 
+# Search for package provided by the OpenXR dependency
+find_package(OpenXR REQUIRED CONFIG)
+
 # Configure libraries CMake uses to link your target library.
 target_link_libraries(dreadful
+        # OpenXR loader support
+        OpenXR::openxr_loader
+
         # The game activity
         game-activity::game-activity
 
