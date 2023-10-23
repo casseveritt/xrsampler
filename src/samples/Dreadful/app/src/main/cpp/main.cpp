@@ -6,17 +6,7 @@
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
 
-#if defined(ANDROID)
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <GLES3/gl3.h>
-#include <GLES3/gl3ext.h>
-#define XR_USE_GRAPHICS_API_OPENGL_ES 1
-#define XR_USE_PLATFORM_ANDROID 1
-#endif
-
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
+#include "xrh.h"
 
 extern "C"
 {
@@ -73,33 +63,6 @@ extern "C"
                 sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK);
     }
 
-    // TODO: Move this to a separate OpenXR source file.
-    bool initOpenXR(JavaVM *vm, jobject ctx)
-    {
-        PFN_xrInitializeLoaderKHR xrInitializeLoaderKHR = nullptr;
-        {
-            auto result = xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", reinterpret_cast<PFN_xrVoidFunction *>(&xrInitializeLoaderKHR));
-            if (result != XR_SUCCESS)
-            {
-                aout << "xrGetInstanceProcAddr(xrInitializeLoaderKHR) failed" << std::endl;
-                // Log error message
-                return false;
-            }
-            aout << "got here: " << __FUNCTION__ << ":" << __LINE__ << std::endl;
-        }
-        {
-            XrLoaderInitInfoAndroidKHR ii{XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR};
-            ii.applicationVM = vm;
-            ii.applicationContext = ctx;
-            auto result = xrInitializeLoaderKHR(reinterpret_cast<XrLoaderInitInfoBaseHeaderKHR *>(&ii));
-        }
-        // until we complete the implementation of this function,
-        // just return false...
-        aout << "finish implementing this function" << std::endl;
-        return false;
-        // return true;
-    }
-
     /*!
      * This the main entry point for a native activity
      */
@@ -111,11 +74,18 @@ extern "C"
         // Register an event handler for Android events
         pApp->onAppCmd = handle_cmd;
 
-        if (!initOpenXR(pApp->activity->vm, pApp->activity->javaGameActivity))
+        if (!xrh::init_loader(pApp->activity->vm, pApp->activity->javaGameActivity))
         {
             aout << "OpenXR initialization failed, exiting";
             return;
         }
+
+        std::vector<XrExtensionProperties> required = {
+            xrh::make_ext_prop(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME)
+        };
+
+        std::vector<XrExtensionProperties> desired;
+        XrInstance inst = xrh::create_instance(required, desired);
 
         // Set input event filters (set it to NULL if the app wants to process all inputs).
         // Note that for key inputs, this example uses the default default_key_filter()
