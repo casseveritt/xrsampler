@@ -9,8 +9,6 @@
 
 struct android_app;
 
-#define DECL_PFN(pfn) PFN_##pfn pfn = nullptr
-
 class Renderer {
 public:
     /*!

@@ -14,31 +14,66 @@
 #include <openxr/openxr_platform.h>
 
 #include <vector>
-#include <span>
-
-void XRH_CheckErrors(XrResult result, const char* function, bool failOnError);
-#define XRH(func) XRH_CheckErrors(func, #func, true);
-
-#define DECL_PFN(pfn) extern PFN_##pfn pfn
 namespace xrh
 {
-    // Get the graphics requirements.
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    DECL_PFN(xrGetOpenGLESGraphicsRequirementsKHR);
-#endif
-
-    #if defined(ANDROID)
+#if defined(ANDROID)
+    // must be called before constructor
     bool init_loader(JavaVM *vm, jobject ctx);
-    #endif
+#endif
+    class instance
+    {
+    public:
+        void add_required_extension(const char *name, uint32_t ver = 1);
+        void add_desired_extension(const char *name, uint32_t ver = 1);
 
-    XrExtensionProperties make_ext_prop(const char* name, uint32_t ver = 1);
+        std::vector<XrExtensionProperties> get_available_extensions() const
+        {
+            return ext.available;
+        }
 
-    std::vector<XrExtensionProperties> enum_extensions();
+        bool create();
 
-    bool ext_supported(std::span<const XrExtensionProperties> ext_span, const XrExtensionProperties& ext);
+        // only available after successful create:
 
-    XrInstance create_instance(const std::vector<XrExtensionProperties>& required, std::vector<XrExtensionProperties>& desired);
+        XrInstance get_instance() const
+        {
+            return inst;
+        }
 
+        XrInstanceProperties get_instance_properties() const
+        {
+            return instprops;
+        }
 
+        XrSystemId get_system_id() const
+        {
+            return sysid;
+        }
+
+        XrSystemProperties get_system_properties() const
+        {
+            return sysprops;
+        }
+
+        std::vector<XrExtensionProperties> get_enabled_extensions() const
+        {
+            return ext.enabled;
+        }
+
+    private:
+        struct extensions
+        {
+            std::vector<XrExtensionProperties> available;
+            std::vector<XrExtensionProperties> required;
+            std::vector<XrExtensionProperties> desired;
+            std::vector<XrExtensionProperties> enabled;
+        };
+
+        extensions ext;
+        XrInstance inst;
+        XrInstanceProperties instprops;
+        XrSystemId sysid;
+        XrSystemProperties sysprops;
+    };
 
 }

@@ -6,6 +6,8 @@
 
 #include "xrh.h"
 
+using namespace std;
+
 extern "C"
 {
 
@@ -67,23 +69,23 @@ extern "C"
     void android_main(struct android_app *pApp)
     {
         // Can be removed, useful to ensure your code is running
-        aout << "Welcome to android_main" << std::endl;
+        aout << "Welcome to android_main" << endl;
 
         // Register an event handler for Android events
         pApp->onAppCmd = handle_cmd;
 
         if (!xrh::init_loader(pApp->activity->vm, pApp->activity->javaGameActivity))
         {
-            aout << "OpenXR initialization failed, exiting";
+            aout << "OpenXR loader initialization failed, exiting" << endl;
             return;
         }
 
-        std::vector<XrExtensionProperties> required = {
-            xrh::make_ext_prop(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME)
-        };
-
-        std::vector<XrExtensionProperties> desired;
-        XrInstance inst = xrh::create_instance(required, desired);
+        xrh::instance inst;
+        inst.add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+        if (!inst.create())
+        {
+            aout << "OpenXR instance creation failed, exiting." << endl;
+        }
 
         // Set input event filters (set it to NULL if the app wants to process all inputs).
         // Note that for key inputs, this example uses the default default_key_filter()

@@ -1,9 +1,11 @@
 #include "xrh.h"
 #include "AndroidOut.h"
 
+#include <span>
+
 using namespace std;
 
-void XRH_CheckErrors(XrResult result, const char *function, bool failOnError)
+XrResult XRH_CheckErrors(XrResult result, const char *function)
 {
     if (XR_FAILED(result))
     {
@@ -11,18 +13,32 @@ void XRH_CheckErrors(XrResult result, const char *function, bool failOnError)
         xrResultToString(XR_NULL_HANDLE, result, errorBuffer);
         aout << "OpenXR error: " << function << ": (" << result << ") " << errorBuffer << endl;
     }
+    return result;
 }
+#define XRH(func) XRH_CheckErrors(func, #func);
 
-#define DECL_LOC_PFN(pfn) PFN_##pfn pfn = nullptr
+#define DECL_PFN(pfn) PFN_##pfn pfn = nullptr
 #define INIT_PFN(inst, pfn) XRH(xrGetInstanceProcAddr(inst, #pfn, reinterpret_cast<PFN_xrVoidFunction *>(&pfn)))
 
 #define DECL_INIT_PFN(inst, pfn) \
-    DECL_LOC_PFN(pfn);         \
+    DECL_PFN(pfn);               \
     INIT_PFN(inst, pfn)
 
 namespace
 {
-    void get_instance_properties(XrInstance inst)
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    DECL_PFN(xrGetOpenGLESGraphicsRequirementsKHR);
+#endif
+
+    XrExtensionProperties make_ext_prop(const char *name, uint32_t ver)
+    {
+        XrExtensionProperties ep{XR_TYPE_EXTENSION_PROPERTIES};
+        strcpy(ep.extensionName, name);
+        ep.extensionVersion = ver;
+        return ep;
+    }
+
+    XrInstanceProperties get_instance_properties(XrInstance inst)
     {
         XrInstanceProperties ii = {XR_TYPE_INSTANCE_PROPERTIES};
         XRH(xrGetInstanceProperties(inst, &ii));
@@ -30,11 +46,11 @@ namespace
              << XR_VERSION_MAJOR(ii.runtimeVersion) << "."
              << XR_VERSION_MINOR(ii.runtimeVersion) << "."
              << XR_VERSION_PATCH(ii.runtimeVersion) << endl;
+        return ii;
     }
 
-    void get_system_properties(XrInstance inst)
+    XrSystemId get_system_id(XrInstance inst)
     {
-
         XrSystemGetInfo sysGetInfo = {XR_TYPE_SYSTEM_GET_INFO};
         sysGetInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
@@ -44,9 +60,13 @@ namespace
         if (res != XR_SUCCESS)
         {
             aout << "Failed to get system." << endl;
-            exit(1);
+            return XR_NULL_SYSTEM_ID;
         }
+        return sysid;
+    }
 
+    XrSystemProperties get_system_properties(XrInstance inst, XrSystemId sysid)
+    {
         XrSystemProperties sysprops = {XR_TYPE_SYSTEM_PROPERTIES};
         XRH(xrGetSystemProperties(inst, sysid, &sysprops));
 
@@ -56,38 +76,7 @@ namespace
              << " MaxWidth=" << sysprops.graphicsProperties.maxSwapchainImageWidth
              << " MaxHeight=" << sysprops.graphicsProperties.maxSwapchainImageHeight
              << " MaxLayers=" << sysprops.graphicsProperties.maxLayerCount << endl;
-    }
-
-}
-
-namespace xrh
-{
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    DECL_LOC_PFN(xrGetOpenGLESGraphicsRequirementsKHR);
-#endif
-
-    bool init_loader(JavaVM *vm, jobject ctx)
-    {
-        DECL_INIT_PFN(XR_NULL_HANDLE, xrInitializeLoaderKHR);
-        if (xrInitializeLoaderKHR == nullptr)
-        {
-            return false;
-        }
-        {
-            XrLoaderInitInfoAndroidKHR ii{XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR};
-            ii.applicationVM = vm;
-            ii.applicationContext = ctx;
-            auto result = xrInitializeLoaderKHR(reinterpret_cast<XrLoaderInitInfoBaseHeaderKHR *>(&ii));
-        }
-        return true;
-    }
-
-    XrExtensionProperties make_ext_prop(const char *name, uint32_t ver)
-    {
-        XrExtensionProperties ep{XR_TYPE_EXTENSION_PROPERTIES};
-        strcpy(ep.extensionName, name);
-        ep.extensionVersion = ver;
-        return ep;
+        return sysprops;
     }
 
     vector<XrExtensionProperties> enum_extensions()
@@ -119,13 +108,46 @@ namespace xrh
         return false;
     }
 
-    XrInstance create_instance(const vector<XrExtensionProperties> &required, vector<XrExtensionProperties> &desired)
+}
+
+namespace xrh
+{
+    bool init_loader(JavaVM *vm, jobject ctx)
     {
-        auto available = enum_extensions();
-        bool foundRequired = true;
-        for (auto &req : required)
+        DECL_INIT_PFN(XR_NULL_HANDLE, xrInitializeLoaderKHR);
+        if (xrInitializeLoaderKHR == nullptr)
         {
-            if (!ext_supported(available, req))
+            return false;
+        }
+        {
+            XrLoaderInitInfoAndroidKHR ii{XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR};
+            ii.applicationVM = vm;
+            ii.applicationContext = ctx;
+            auto result = xrInitializeLoaderKHR(reinterpret_cast<XrLoaderInitInfoBaseHeaderKHR *>(&ii));
+        }
+        return true;
+    }
+
+    void instance::add_required_extension(const char *extName, uint32_t ver) {
+        ext.required.push_back(make_ext_prop(extName, ver));
+    }
+
+    void instance::add_desired_extension(const char *extName, uint32_t ver) {
+        ext.desired.push_back(make_ext_prop(extName, ver));
+    }
+
+    bool instance::create()
+    {
+        ext.available = enum_extensions();
+        ext.enabled.clear();
+        bool foundRequired = true;
+        for (auto &req : ext.required)
+        {
+            if (ext_supported(ext.available, req))
+            {
+                ext.enabled.push_back(req);
+            }
+            else
             {
                 foundRequired = false;
                 aout << "Required extension not supported: " << req.extensionName << "(v" << req.extensionVersion << ")" << endl;
@@ -133,43 +155,38 @@ namespace xrh
         }
         if (!foundRequired)
         {
-            return XR_NULL_HANDLE;
+            return false;
         }
-        for (size_t i = 0; i < desired.size(); ++i)
+        for (auto &des : ext.desired)
         {
-            XrExtensionProperties ep = desired[i];
-            if (!ext_supported(available, ep))
+            if (ext_supported(ext.available, des))
             {
-                aout << "Desired extension not supported: " << ep.extensionName << "(v" << ep.extensionVersion << ")" << endl;
-                desired.erase(desired.begin() + i);
-                --i;
-                continue;
+                ext.enabled.push_back(des);
+            }
+            else
+            {
+                aout << "Desired extension not supported: " << des.extensionName << "(v" << des.extensionVersion << ")" << endl;
             }
         }
         vector<const char *> extNames;
-        for (const auto &req : required)
+        for (const auto &en : ext.enabled)
         {
-            extNames.push_back(req.extensionName);
-        }
-        for (const auto &des : desired)
-        {
-            extNames.push_back(des.extensionName);
+            extNames.push_back(en.extensionName);
         }
 
         XrInstanceCreateInfo ci{XR_TYPE_INSTANCE_CREATE_INFO};
         ci.enabledExtensionCount = extNames.size();
         ci.enabledExtensionNames = extNames.data();
-        XrInstance inst = XR_NULL_HANDLE;
-        auto res = xrCreateInstance(&ci, &inst);
-        if (res != XR_SUCCESS)
-        {
-            aout << "xrCreateInstance failed (" << res << ")" << endl;
-            return XR_NULL_HANDLE;
+        inst = XR_NULL_HANDLE;
+        auto res = XRH(xrCreateInstance(&ci, &inst));
+        if (inst == XR_NULL_HANDLE) {
+            return false;
         }
 
-        get_instance_properties(inst);
-        get_system_properties(inst);
+        instprops = ::get_instance_properties(inst);
+        sysid = ::get_system_id(inst);
+        sysprops = ::get_system_properties(inst, sysid);
 
-        return inst;
+        return true;
     }
 }
