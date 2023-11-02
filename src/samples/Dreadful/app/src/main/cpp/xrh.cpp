@@ -128,11 +128,21 @@ namespace xrh
         return true;
     }
 
-    void instance::add_required_extension(const char *extName, uint32_t ver) {
+    instance::instance()
+    {
+    }
+
+    instance::~instance()
+    {
+    }
+
+    void instance::add_required_extension(const char *extName, uint32_t ver)
+    {
         ext.required.push_back(make_ext_prop(extName, ver));
     }
 
-    void instance::add_desired_extension(const char *extName, uint32_t ver) {
+    void instance::add_desired_extension(const char *extName, uint32_t ver)
+    {
         ext.desired.push_back(make_ext_prop(extName, ver));
     }
 
@@ -179,7 +189,8 @@ namespace xrh
         ci.enabledExtensionNames = extNames.data();
         inst = XR_NULL_HANDLE;
         auto res = XRH(xrCreateInstance(&ci, &inst));
-        if (inst == XR_NULL_HANDLE) {
+        if (inst == XR_NULL_HANDLE)
+        {
             return false;
         }
 
@@ -188,5 +199,14 @@ namespace xrh
         sysprops = ::get_system_properties(inst, sysid);
 
         return true;
+    }
+
+    void instance::destroy()
+    {
+        if (inst == XR_NULL_HANDLE) {
+            return;
+        }
+        XRH(xrDestroyInstance(inst));
+        inst = XR_NULL_HANDLE;
     }
 }

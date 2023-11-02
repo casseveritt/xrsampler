@@ -23,6 +23,9 @@ namespace xrh
     class instance
     {
     public:
+        instance();
+        ~instance();
+
         void add_required_extension(const char *name, uint32_t ver = 1);
         void add_desired_extension(const char *name, uint32_t ver = 1);
 
@@ -32,6 +35,7 @@ namespace xrh
         }
 
         bool create();
+        void destroy();
 
         // only available after successful create:
 
