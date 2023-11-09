@@ -177,4 +177,46 @@ void instance::destroy() {
   XRH(xrDestroyInstance(inst));
   inst = XR_NULL_HANDLE;
 }
+
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+void instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
+  gfxbinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR};
+  gfxbinding.display = dpy;
+  gfxbinding.config = cfg;
+  gfxbinding.context = ctx;
+}
+#endif
+
+session* instance::create_session() {
+  XrSessionCreateInfo ci = {XR_TYPE_SESSION_CREATE_INFO};
+  ci.next = &gfxbinding;
+  ci.createFlags = 0;
+  ci.systemId = sysid;
+
+  XrSession sess = XR_NULL_HANDLE;
+
+  auto res = XRH(xrCreateSession(inst, &ci, &sess));
+  if (sess == XR_NULL_HANDLE) {
+    aout << "Failed to create XR session" << endl;
+    return nullptr;
+  }
+  ssn = new session(this, sess);
+  return ssn;
+}
+
+void instance::session_destroyed(session* sess) {
+  if (sess != ssn) {
+    aout << "The session does not belong to this instance." << endl;
+    return;
+  }
+  ssn = nullptr;
+}
+
+session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {}
+
+session::~session() {
+  XRH(xrDestroySession(ssn));
+  inst->session_destroyed(this);
+}
+
 }  // namespace xrh

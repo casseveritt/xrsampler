@@ -19,6 +19,8 @@ namespace xrh {
 // must be called before constructor
 bool init_loader(JavaVM* vm, jobject ctx);
 #endif
+
+class session;
 class instance {
  public:
   instance();
@@ -56,22 +58,40 @@ class instance {
     return ext.enabled;
   }
 
- private:
-  struct extensions {
-    std::vector<XrExtensionProperties> available;
-    std::vector<XrExtensionProperties> required;
-    std::vector<XrExtensionProperties> desired;
-    std::vector<XrExtensionProperties> enabled;
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  void set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx);
+#endif
+
+  session* create_session();
+  void session_destroyed(session* sess);
+
+   private:
+    struct extensions {
+      std::vector<XrExtensionProperties> available;
+      std::vector<XrExtensionProperties> required;
+      std::vector<XrExtensionProperties> desired;
+      std::vector<XrExtensionProperties> enabled;
+    };
+
+    extensions ext;
+    XrInstance inst = XR_NULL_HANDLE;
+    XrInstanceProperties instprops;
+    XrSystemId sysid = XR_NULL_SYSTEM_ID;
+    XrSystemProperties sysprops;
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    XrGraphicsRequirementsOpenGLESKHR gfxreqs;
+    XrGraphicsBindingOpenGLESAndroidKHR gfxbinding;
+#endif
+    session* ssn = nullptr;
   };
 
-  extensions ext;
-  XrInstance inst;
-  XrInstanceProperties instprops;
-  XrSystemId sysid;
-  XrSystemProperties sysprops;
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-  XrGraphicsRequirementsOpenGLESKHR gfxreqs;
-#endif
+class session {
+  public:
+  session(instance* instptr, XrSession sess);
+  ~session();
+  private:
+  instance* inst;
+  XrSession ssn;
 };
 
 }  // namespace xrh
