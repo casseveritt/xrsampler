@@ -69,6 +69,9 @@ class instance {
   XrInstanceProperties instprops;
   XrSystemId sysid;
   XrSystemProperties sysprops;
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  XrGraphicsRequirementsOpenGLESKHR gfxreqs;
+#endif
 };
 
 }  // namespace xrh

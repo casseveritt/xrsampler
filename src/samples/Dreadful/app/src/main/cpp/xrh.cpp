@@ -161,6 +161,12 @@ bool instance::create() {
   sysid = ::get_system_id(inst);
   sysprops = ::get_system_properties(inst, sysid);
 
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  DECL_INIT_PFN(inst, xrGetOpenGLESGraphicsRequirementsKHR);
+  gfxreqs = {XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_ES_KHR};
+  XRH(xrGetOpenGLESGraphicsRequirementsKHR(inst, sysid, &gfxreqs));
+#endif
+
   return true;
 }
 
