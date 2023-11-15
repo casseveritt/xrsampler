@@ -167,7 +167,48 @@ bool instance::create() {
   XRH(xrGetOpenGLESGraphicsRequirementsKHR(inst, sysid, &gfxreqs));
 #endif
 
-  return true;
+  // Get view config info
+  uint32_t viewConfigTypeCount = 0;
+  XRH(xrEnumerateViewConfigurations(inst, sysid, 0, &viewConfigTypeCount, nullptr));
+
+  vector<XrViewConfigurationType> viewConfigTypes(viewConfigTypeCount);
+
+  XRH(xrEnumerateViewConfigurations(inst, sysid, viewConfigTypeCount, &viewConfigTypeCount, viewConfigTypes.data()));
+
+  aout << "Available Viewport Configuration Types: " << viewConfigTypeCount << endl;
+
+  bool succeeded = false;
+  for (const auto& vct : viewConfigTypes) {
+    if (vct != XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO) {
+      continue;
+    }
+    uint32_t viewCount = 0;
+    XRH(xrEnumerateViewConfigurationViews(inst, sysid, vct, 0, &viewCount, nullptr));
+
+    if (viewCount != 2) {
+      continue;
+    }
+
+    XrViewConfigurationProperties vcp = {XR_TYPE_VIEW_CONFIGURATION_PROPERTIES};
+    XRH(xrGetViewConfigurationProperties(inst, sysid, vct, &vcp));
+    fov_mutable = vcp.fovMutable;
+    aout << "fov_mutable=" << fov_mutable << endl;
+
+    for (auto& vcv : view_config_views) {
+      vcv = {XR_TYPE_VIEW_CONFIGURATION_VIEW};
+    }
+
+    XRH(xrEnumerateViewConfigurationViews(inst, sysid, vct, viewCount, &viewCount, view_config_views.data()));
+
+    {
+      auto& e = view_config_views[0];
+      aout << "recommended dims: [w=" << e.recommendedImageRectWidth << ", h=" << e.recommendedImageRectHeight
+           << ", s=" << e.recommendedSwapchainSampleCount << "]" << endl;
+    }
+    succeeded = true;
+  }
+
+  return succeeded;
 }
 
 void instance::destroy() {

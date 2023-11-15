@@ -13,6 +13,7 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+#include <array>
 #include <vector>
 namespace xrh {
 #if defined(ANDROID)
@@ -65,31 +66,34 @@ class instance {
   session* create_session();
   void session_destroyed(session* sess);
 
-   private:
-    struct extensions {
-      std::vector<XrExtensionProperties> available;
-      std::vector<XrExtensionProperties> required;
-      std::vector<XrExtensionProperties> desired;
-      std::vector<XrExtensionProperties> enabled;
-    };
-
-    extensions ext;
-    XrInstance inst = XR_NULL_HANDLE;
-    XrInstanceProperties instprops;
-    XrSystemId sysid = XR_NULL_SYSTEM_ID;
-    XrSystemProperties sysprops;
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    XrGraphicsRequirementsOpenGLESKHR gfxreqs;
-    XrGraphicsBindingOpenGLESAndroidKHR gfxbinding;
-#endif
-    session* ssn = nullptr;
+ private:
+  struct extensions {
+    std::vector<XrExtensionProperties> available;
+    std::vector<XrExtensionProperties> required;
+    std::vector<XrExtensionProperties> desired;
+    std::vector<XrExtensionProperties> enabled;
   };
 
+  extensions ext;
+  XrInstance inst = XR_NULL_HANDLE;
+  XrInstanceProperties instprops;
+  XrSystemId sysid = XR_NULL_SYSTEM_ID;
+  XrSystemProperties sysprops;
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  XrGraphicsRequirementsOpenGLESKHR gfxreqs;
+  XrGraphicsBindingOpenGLESAndroidKHR gfxbinding;
+#endif
+  session* ssn = nullptr;
+  bool fov_mutable = false;
+  std::array<XrViewConfigurationView, 2> view_config_views;
+};
+
 class session {
-  public:
+ public:
   session(instance* instptr, XrSession sess);
   ~session();
-  private:
+
+ private:
   instance* inst;
   XrSession ssn;
 };
