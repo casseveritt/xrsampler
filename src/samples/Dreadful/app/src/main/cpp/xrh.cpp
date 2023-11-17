@@ -253,7 +253,16 @@ void instance::session_destroyed(session* sess) {
   ssn = nullptr;
 }
 
-session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {}
+session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {
+  uint32_t numRefSpaces = 0;
+  XRH(xrEnumerateReferenceSpaces(ssn, 0, &numRefSpaces, nullptr));
+  vector<XrReferenceSpaceType> refspaces(numRefSpaces);
+  XRH(xrEnumerateReferenceSpaces(ssn, refspaces.size(), &numRefSpaces, refspaces.data()));
+
+  for (auto rst : refspaces) {
+    refspacetypes.insert(rst);
+  }
+}
 
 session::~session() {
   XRH(xrDestroySession(ssn));

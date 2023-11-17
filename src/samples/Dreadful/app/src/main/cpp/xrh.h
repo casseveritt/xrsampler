@@ -14,6 +14,7 @@
 #include <openxr/openxr_platform.h>
 
 #include <array>
+#include <set>
 #include <vector>
 namespace xrh {
 #if defined(ANDROID)
@@ -96,6 +97,7 @@ class session {
  private:
   instance* inst;
   XrSession ssn;
+  std::set<XrReferenceSpaceType> refspacetypes;
 };
 
 }  // namespace xrh
