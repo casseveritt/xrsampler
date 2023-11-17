@@ -89,15 +89,29 @@ class instance {
   std::array<XrViewConfigurationView, 2> view_config_views;
 };
 
+class space;
 class session {
  public:
   session(instance* instptr, XrSession sess);
   ~session();
 
+  space* create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis);
+  void space_destroyed(space* space_);
  private:
   instance* inst;
   XrSession ssn;
   std::set<XrReferenceSpaceType> refspacetypes;
+  std::set<space*> spaces;
+};
+
+class space {
+ public:
+  space(session* ssnptr_, XrSpace spacehandle_);
+  ~space();
+
+ private:
+  session* ssnptr;
+  XrSpace spacehandle;
 };
 
 }  // namespace xrh

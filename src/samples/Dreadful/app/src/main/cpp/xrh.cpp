@@ -215,6 +215,9 @@ void instance::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
+  if (ssn) {
+    delete ssn;
+  }
   XRH(xrDestroyInstance(inst));
   inst = XR_NULL_HANDLE;
 }
@@ -265,8 +268,45 @@ session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {
 }
 
 session::~session() {
+  for (auto s : spaces) {
+    delete s;
+  }
   XRH(xrDestroySession(ssn));
   inst->session_destroyed(this);
+}
+
+space* session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis) {
+  if (refspacetypes.find(refspacetype) == refspacetypes.end()) {
+    aout << "Unsupported reference space type." << endl;
+    return nullptr;
+  }
+  XrReferenceSpaceCreateInfo ci{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
+  ci.referenceSpaceType = refspacetype;
+  ci.poseInReferenceSpace = refFromThis;
+
+  XrSpace spacehandle = XR_NULL_HANDLE;
+  auto res = XRH(xrCreateReferenceSpace(ssn, &ci, &spacehandle));
+  if (res != XR_SUCCESS) {
+    aout << "Reference space creation failed." << endl;
+    return nullptr;
+  }
+  space* s = new space(this, spacehandle);
+  spaces.insert(s);
+  return s;
+}
+
+void session::space_destroyed(space* s) {
+  if (spaces.find(s) == spaces.end()) {
+    aout << "Trying to mark a space destroyed that is not a child of this session." << endl;
+  }
+  spaces.erase(s);
+}
+
+space::space(session* ssnptr_, XrSpace spacehandle_) : ssnptr(ssnptr_), spacehandle(spacehandle_) {}
+
+space::~space() {
+  XRH(xrDestroySpace(spacehandle));
+  ssnptr->space_destroyed(this);
 }
 
 }  // namespace xrh
