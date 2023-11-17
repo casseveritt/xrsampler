@@ -109,19 +109,19 @@ bool init_loader(JavaVM* vm, jobject ctx) {
   return true;
 }
 
-instance::instance() {}
+Instance::Instance() {}
 
-instance::~instance() {}
+Instance::~Instance() {}
 
-void instance::add_required_extension(const char* extName, uint32_t ver) {
+void Instance::add_required_extension(const char* extName, uint32_t ver) {
   ext.required.push_back(make_ext_prop(extName, ver));
 }
 
-void instance::add_desired_extension(const char* extName, uint32_t ver) {
+void Instance::add_desired_extension(const char* extName, uint32_t ver) {
   ext.desired.push_back(make_ext_prop(extName, ver));
 }
 
-bool instance::create() {
+bool Instance::create() {
   ext.available = enum_extensions();
   ext.enabled.clear();
   bool foundRequired = true;
@@ -211,7 +211,7 @@ bool instance::create() {
   return succeeded;
 }
 
-void instance::destroy() {
+void Instance::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
@@ -223,7 +223,7 @@ void instance::destroy() {
 }
 
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-void instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
+void Instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
   gfxbinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR};
   gfxbinding.display = dpy;
   gfxbinding.config = cfg;
@@ -231,7 +231,7 @@ void instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
 }
 #endif
 
-session* instance::create_session() {
+Session* Instance::create_session() {
   XrSessionCreateInfo ci = {XR_TYPE_SESSION_CREATE_INFO};
   ci.next = &gfxbinding;
   ci.createFlags = 0;
@@ -244,11 +244,11 @@ session* instance::create_session() {
     aout << "Failed to create XR session" << endl;
     return nullptr;
   }
-  ssn = new session(this, sess);
+  ssn = new Session(this, sess);
   return ssn;
 }
 
-void instance::session_destroyed(session* sess) {
+void Instance::session_destroyed(Session* sess) {
   if (sess != ssn) {
     aout << "The session does not belong to this instance." << endl;
     return;
@@ -256,7 +256,7 @@ void instance::session_destroyed(session* sess) {
   ssn = nullptr;
 }
 
-session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {
+Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
   uint32_t numRefSpaces = 0;
   XRH(xrEnumerateReferenceSpaces(ssn, 0, &numRefSpaces, nullptr));
   vector<XrReferenceSpaceType> refspaces(numRefSpaces);
@@ -267,7 +267,7 @@ session::session(instance* instptr, XrSession sess) : inst(instptr), ssn(sess) {
   }
 }
 
-session::~session() {
+Session::~Session() {
   for (auto s : spaces) {
     delete s;
   }
@@ -275,7 +275,7 @@ session::~session() {
   inst->session_destroyed(this);
 }
 
-space* session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis) {
+Space* Session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis) {
   if (refspacetypes.find(refspacetype) == refspacetypes.end()) {
     aout << "Unsupported reference space type." << endl;
     return nullptr;
@@ -290,23 +290,23 @@ space* session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFr
     aout << "Reference space creation failed." << endl;
     return nullptr;
   }
-  space* s = new space(this, spacehandle);
+  auto s = new Space(this, spacehandle);
   spaces.insert(s);
   return s;
 }
 
-void session::space_destroyed(space* s) {
+void Session::space_destroyed(Space* s) {
   if (spaces.find(s) == spaces.end()) {
     aout << "Trying to mark a space destroyed that is not a child of this session." << endl;
   }
   spaces.erase(s);
 }
 
-space::space(session* ssnptr_, XrSpace spacehandle_) : ssnptr(ssnptr_), spacehandle(spacehandle_) {}
+Space::Space(Session* ssn_, XrSpace space_) : ssn(ssn_), space(space_) {}
 
-space::~space() {
-  XRH(xrDestroySpace(spacehandle));
-  ssnptr->space_destroyed(this);
+Space::~Space() {
+  XRH(xrDestroySpace(space));
+  ssn->space_destroyed(this);
 }
 
 }  // namespace xrh

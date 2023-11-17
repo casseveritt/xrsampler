@@ -22,11 +22,11 @@ namespace xrh {
 bool init_loader(JavaVM* vm, jobject ctx);
 #endif
 
-class session;
-class instance {
+class Session;
+class Instance {
  public:
-  instance();
-  ~instance();
+  Instance();
+  ~Instance();
 
   void add_required_extension(const char* name, uint32_t ver = 1);
   void add_desired_extension(const char* name, uint32_t ver = 1);
@@ -64,8 +64,8 @@ class instance {
   void set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx);
 #endif
 
-  session* create_session();
-  void session_destroyed(session* sess);
+  Session* create_session();
+  void session_destroyed(Session* sess);
 
  private:
   struct extensions {
@@ -84,34 +84,35 @@ class instance {
   XrGraphicsRequirementsOpenGLESKHR gfxreqs;
   XrGraphicsBindingOpenGLESAndroidKHR gfxbinding;
 #endif
-  session* ssn = nullptr;
+  Session* ssn = nullptr;
   bool fov_mutable = false;
   std::array<XrViewConfigurationView, 2> view_config_views;
 };
 
-class space;
-class session {
+class Space;
+class Session {
  public:
-  session(instance* instptr, XrSession sess);
-  ~session();
+  Session(Instance* inst_, XrSession ssn_);
+  ~Session();
 
-  space* create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis);
-  void space_destroyed(space* space_);
+  Space* create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis);
+  void space_destroyed(Space* space_);
+
  private:
-  instance* inst;
+  Instance* inst;
   XrSession ssn;
   std::set<XrReferenceSpaceType> refspacetypes;
-  std::set<space*> spaces;
+  std::set<Space*> spaces;
 };
 
-class space {
+class Space {
  public:
-  space(session* ssnptr_, XrSpace spacehandle_);
-  ~space();
+  Space(Session* ssn_, XrSpace space_);
+  ~Space();
 
  private:
-  session* ssnptr;
-  XrSpace spacehandle;
+  Session* ssn;
+  XrSpace space;
 };
 
 }  // namespace xrh

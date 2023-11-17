@@ -71,7 +71,7 @@ void android_main(struct android_app* pApp) {
     return;
   }
 
-  xrh::instance inst;
+  xrh::Instance inst;
   inst.add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
   if (!inst.create()) {
     aout << "OpenXR instance creation failed, exiting." << endl;
