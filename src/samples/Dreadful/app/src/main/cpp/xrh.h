@@ -65,7 +65,10 @@ class Instance {
 #endif
 
   Session* create_session();
-  void session_destroyed(Session* sess);
+
+  const XrViewConfigurationView& get_view_config_view(int eye) const {
+    return view_config_views[std::clamp(eye, 0, 1)];
+  } 
 
  private:
   struct extensions {
@@ -84,7 +87,6 @@ class Instance {
   XrGraphicsRequirementsOpenGLESKHR gfxreqs;
   XrGraphicsBindingOpenGLESAndroidKHR gfxbinding;
 #endif
-  Session* ssn = nullptr;
   bool fov_mutable = false;
   std::array<XrViewConfigurationView, 2> view_config_views;
 };
@@ -95,14 +97,16 @@ class Session {
   Session(Instance* inst_, XrSession ssn_);
   ~Session();
 
+  const Instance* get_instance() const {
+    return inst;
+  }
+
   Space* create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis);
-  void space_destroyed(Space* space_);
 
  private:
   Instance* inst;
   XrSession ssn;
   std::set<XrReferenceSpaceType> refspacetypes;
-  std::set<Space*> spaces;
 };
 
 class Space {
@@ -110,6 +114,9 @@ class Space {
   Space(Session* ssn_, XrSpace space_);
   ~Space();
 
+  const Session* get_session() const {
+    return ssn;
+  }
  private:
   Session* ssn;
   XrSpace space;

@@ -215,9 +215,6 @@ void Instance::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
-  if (ssn) {
-    delete ssn;
-  }
   XRH(xrDestroyInstance(inst));
   inst = XR_NULL_HANDLE;
 }
@@ -244,16 +241,7 @@ Session* Instance::create_session() {
     aout << "Failed to create XR session" << endl;
     return nullptr;
   }
-  ssn = new Session(this, sess);
-  return ssn;
-}
-
-void Instance::session_destroyed(Session* sess) {
-  if (sess != ssn) {
-    aout << "The session does not belong to this instance." << endl;
-    return;
-  }
-  ssn = nullptr;
+  return new Session(this, sess);
 }
 
 Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
@@ -268,11 +256,7 @@ Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
 }
 
 Session::~Session() {
-  for (auto s : spaces) {
-    delete s;
-  }
   XRH(xrDestroySession(ssn));
-  inst->session_destroyed(this);
 }
 
 Space* Session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis) {
@@ -290,23 +274,13 @@ Space* Session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFr
     aout << "Reference space creation failed." << endl;
     return nullptr;
   }
-  auto s = new Space(this, spacehandle);
-  spaces.insert(s);
-  return s;
-}
-
-void Session::space_destroyed(Space* s) {
-  if (spaces.find(s) == spaces.end()) {
-    aout << "Trying to mark a space destroyed that is not a child of this session." << endl;
-  }
-  spaces.erase(s);
+  return new Space(this, spacehandle);
 }
 
 Space::Space(Session* ssn_, XrSpace space_) : ssn(ssn_), space(space_) {}
 
 Space::~Space() {
   XRH(xrDestroySpace(space));
-  ssn->space_destroyed(this);
 }
 
 }  // namespace xrh
