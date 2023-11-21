@@ -1555,7 +1555,7 @@ class Quaternion {
     q[3] = R3_ONE;
   }
 
-  Quaternion(const T v[4]) {
+  Quaternion(const T* v) {
     SetValue(v);
   }
 
