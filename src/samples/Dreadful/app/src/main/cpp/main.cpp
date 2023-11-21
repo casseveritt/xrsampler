@@ -71,11 +71,17 @@ void android_main(struct android_app* pApp) {
     return;
   }
 
-  xrh::Instance inst;
-  inst.add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
-  if (!inst.create()) {
+  using namespace xrh;
+  auto inst = new Instance();
+  inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+  if (!inst->create()) {
     aout << "OpenXR instance creation failed, exiting." << endl;
   }
+
+  auto ssn = inst->create_session();
+
+  auto rsci = RefSpace::make_create_info();
+  auto local = ssn->create_refspace(rsci);
 
   // Set input event filters (set it to NULL if the app wants to process all inputs).
   // Note that for key inputs, this example uses the default default_key_filter()

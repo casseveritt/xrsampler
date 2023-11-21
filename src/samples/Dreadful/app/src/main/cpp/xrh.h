@@ -22,6 +22,10 @@ namespace xrh {
 bool init_loader(JavaVM* vm, jobject ctx);
 #endif
 
+constexpr XrVector3f ZeroVec3{0, 0, 0};
+constexpr XrQuaternionf IdentityQuat{0, 0, 0, 1};
+constexpr XrPosef IdentityPose{IdentityQuat, ZeroVec3};
+
 class Session;
 class Instance {
  public:
@@ -68,7 +72,7 @@ class Instance {
 
   const XrViewConfigurationView& get_view_config_view(int eye) const {
     return view_config_views[std::clamp(eye, 0, 1)];
-  } 
+  }
 
  private:
   struct extensions {
@@ -92,6 +96,8 @@ class Instance {
 };
 
 class Space;
+class Swapchain;
+
 class Session {
  public:
   Session(Instance* inst_, XrSession ssn_);
@@ -101,7 +107,8 @@ class Session {
     return inst;
   }
 
-  Space* create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis);
+  Space* create_refspace(const XrReferenceSpaceCreateInfo& createInfo);
+  Swapchain* create_swapchain(const XrSwapchainCreateInfo& createInfo);
 
  private:
   Instance* inst;
@@ -111,15 +118,68 @@ class Session {
 
 class Space {
  public:
-  Space(Session* ssn_, XrSpace space_);
+  enum class Type {
+    Reference = 0,
+    Action = 1,
+    SpatialAnchor = 2,
+  };
+
+  Space(Session* ssn_, XrSpace space_, Type type_);
   ~Space();
 
   const Session* get_session() const {
     return ssn;
   }
+
+  Type get_type() const {
+    return type;
+  }
+
+  XrSpace get_space() const {
+    return space;
+  }
+
  private:
   Session* ssn;
   XrSpace space;
+  Type type;
+};
+
+class RefSpace : public Space {
+ public:
+  using CreateInfo = XrReferenceSpaceCreateInfo;
+  using RefType = XrReferenceSpaceType;
+  static constexpr XrStructureType CIST = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+  static constexpr XrReferenceSpaceType Local = XR_REFERENCE_SPACE_TYPE_LOCAL;
+  RefSpace(Session* ssn_, XrSpace space_, const CreateInfo& ci_);
+  virtual ~RefSpace();
+
+  RefType get_reftype() const {
+    return reftype;
+  }
+
+  static CreateInfo make_create_info(RefType reftype = Local) {
+    return {CIST, nullptr, reftype, IdentityPose};
+  }
+
+ private:
+  RefType reftype;
+  CreateInfo ci;
+};
+
+class Swapchain {
+ public:
+  using CreateInfo = XrSwapchainCreateInfo;
+  Swapchain(Session* ssn_, XrSwapchain swapchain_, const CreateInfo& ci_);
+  ~Swapchain();
+
+ private:
+  Session* ssn;
+  XrSwapchain swapchain;
+  CreateInfo ci;
+  uint32_t chainlength;
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+#endif
 };
 
 }  // namespace xrh

@@ -259,28 +259,32 @@ Session::~Session() {
   XRH(xrDestroySession(ssn));
 }
 
-Space* Session::create_refspace(XrReferenceSpaceType refspacetype, XrPosef refFromThis) {
-  if (refspacetypes.find(refspacetype) == refspacetypes.end()) {
+Space* Session::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
+  if (refspacetypes.find(createInfo.referenceSpaceType) == refspacetypes.end()) {
     aout << "Unsupported reference space type." << endl;
     return nullptr;
   }
-  XrReferenceSpaceCreateInfo ci{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
-  ci.referenceSpaceType = refspacetype;
-  ci.poseInReferenceSpace = refFromThis;
 
   XrSpace spacehandle = XR_NULL_HANDLE;
-  auto res = XRH(xrCreateReferenceSpace(ssn, &ci, &spacehandle));
+  auto res = XRH(xrCreateReferenceSpace(ssn, &createInfo, &spacehandle));
   if (res != XR_SUCCESS) {
     aout << "Reference space creation failed." << endl;
     return nullptr;
   }
-  return new Space(this, spacehandle);
+  return new RefSpace(this, spacehandle, createInfo);
 }
 
-Space::Space(Session* ssn_, XrSpace space_) : ssn(ssn_), space(space_) {}
+Space::Space(Session* ssn_, XrSpace space_, Space::Type type_) : ssn(ssn_), space(space_), type(type_) {}
 
 Space::~Space() {
   XRH(xrDestroySpace(space));
 }
+
+RefSpace::RefSpace(Session* ssn_, XrSpace space_, const CreateInfo& ci_) : Space(ssn_, space_, Space::Type::Reference), ci(ci_) {}
+
+RefSpace::~RefSpace() {}
+
+Swapchain::Swapchain(Session* ssn_, XrSwapchain swapchain_, const XrSwapchainCreateInfo& ci_)
+    : ssn(ssn_), swapchain(swapchain_), ci(ci_) {}
 
 }  // namespace xrh
