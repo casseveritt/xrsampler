@@ -4,6 +4,7 @@
 #include "AndroidOut.h"
 #include "Renderer.h"
 #include "xrh.h"
+#include "xrhlinear.h"
 
 using namespace std;
 using namespace xrh;
@@ -120,6 +121,11 @@ void android_main(struct android_app* pApp) {
   }
 
   Xr xr;
+  
+  XrVector3f xv3{1, 2, 3};
+  Vector3f v3 = xv3;
+  v3.Normalize();
+  XrVector3f xv3b = v3;
 
   // Set input event filters (set it to NULL if the app wants to process all inputs).
   // Note that for key inputs, this example uses the default default_key_filter()
