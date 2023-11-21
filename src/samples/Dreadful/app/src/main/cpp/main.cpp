@@ -6,6 +6,7 @@
 #include "xrh.h"
 
 using namespace std;
+using namespace xrh;
 
 extern "C" {
 
@@ -56,6 +57,53 @@ bool motion_event_filter_func(const GameActivityMotionEvent* motionEvent) {
   return (sourceClass == AINPUT_SOURCE_CLASS_POINTER || sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK);
 }
 
+namespace {
+struct Xr {
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  bool init(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx)
+#else
+  bool init()
+#endif
+  {
+    // instance
+    inst = new Instance();
+    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+    if (!inst->create()) {
+      aout << "OpenXR instance creation failed, exiting." << endl;
+      return false;
+    }
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    inst->set_gfx_binding(dpy, cfg, ctx);
+#endif
+    // session
+    ssn = inst->create_session();
+
+    // local space
+    auto rsci = RefSpace::make_create_info();
+    local = ssn->create_refspace(rsci);
+
+    // swapchain
+    auto vcv = inst->get_view_config_view(0);
+    auto scci = Swapchain::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
+    sc = ssn->create_swapchain(scci);
+    return true;
+  }
+
+  void destroy() {
+    delete sc;
+    delete local;
+    delete ssn;
+    delete inst;
+  }
+
+  Instance* inst = nullptr;
+  Session* ssn = nullptr;
+  Space* local = nullptr;
+  Swapchain* sc = nullptr;
+};
+
+}  // namespace
+
 /*!
  * This the main entry point for a native activity
  */
@@ -66,26 +114,12 @@ void android_main(struct android_app* pApp) {
   // Register an event handler for Android events
   pApp->onAppCmd = handle_cmd;
 
-  if (!xrh::init_loader(pApp->activity->vm, pApp->activity->javaGameActivity)) {
+  if (!init_loader(pApp->activity->vm, pApp->activity->javaGameActivity)) {
     aout << "OpenXR loader initialization failed, exiting" << endl;
     return;
   }
 
-  using namespace xrh;
-  auto inst = new Instance();
-  inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
-  if (!inst->create()) {
-    aout << "OpenXR instance creation failed, exiting." << endl;
-  }
-
-  auto ssn = inst->create_session();
-
-  auto rsci = RefSpace::make_create_info();
-  auto local = ssn->create_refspace(rsci);
-
-  auto vcv = inst->get_view_config_view(0);
-  auto scci = Swapchain::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
-  auto sc = ssn->create_swapchain(scci);
+  Xr xr;
 
   // Set input event filters (set it to NULL if the app wants to process all inputs).
   // Note that for key inputs, this example uses the default default_key_filter()
@@ -109,6 +143,10 @@ void android_main(struct android_app* pApp) {
       // user data remember to change it here
       auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
 
+      if (xr.inst == nullptr) {
+        xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
+      }
+
       // Process game input
       pRenderer->handleInput();
 
@@ -116,5 +154,6 @@ void android_main(struct android_app* pApp) {
       pRenderer->render();
     }
   } while (!pApp->destroyRequested);
+  xr.destroy();
 }
 }

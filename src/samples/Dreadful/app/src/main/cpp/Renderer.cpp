@@ -189,6 +189,7 @@ void Renderer::initRenderer() {
 
   aout << "Found " << numConfigs << " configs" << std::endl;
   aout << "Chose " << config << std::endl;
+  config_ = config;
 
   // create the proper window surface
   EGLint format;

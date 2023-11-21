@@ -40,6 +40,18 @@ class Renderer {
    */
   void render();
 
+  EGLDisplay getDisplay() {
+    return display_;
+  }
+
+  EGLConfig getConfig() {
+    return config_;
+  }
+
+  EGLContext getContext() {
+    return context_;
+  }
+
  private:
   /*!
    * Performs necessary OpenGL initialization. Customize this if you want to change your EGL
@@ -61,6 +73,7 @@ class Renderer {
 
   android_app* app_;
   EGLDisplay display_;
+  EGLConfig config_;
   EGLSurface surface_;
   EGLContext context_;
   EGLint width_;

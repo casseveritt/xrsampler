@@ -296,4 +296,8 @@ RefSpace::~RefSpace() {}
 Swapchain::Swapchain(Session* ssn_, XrSwapchain swapchain_, const XrSwapchainCreateInfo& ci_)
     : ssn(ssn_), swapchain(swapchain_), ci(ci_) {}
 
+Swapchain::~Swapchain() {
+  XRH(xrDestroySwapchain(swapchain));
+}
+
 }  // namespace xrh
