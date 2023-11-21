@@ -274,6 +274,15 @@ Space* Session::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
   return new RefSpace(this, spacehandle, createInfo);
 }
 
+Swapchain* Session::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
+  XrSwapchain sc;
+  auto res = XRH(xrCreateSwapchain(ssn, &createInfo, &sc));
+  if (res != XR_SUCCESS) {
+    aout << "Swapchain creation failed." << endl;
+  }
+  return new Swapchain(this, sc, createInfo);
+}
+
 Space::Space(Session* ssn_, XrSpace space_, Space::Type type_) : ssn(ssn_), space(space_), type(type_) {}
 
 Space::~Space() {

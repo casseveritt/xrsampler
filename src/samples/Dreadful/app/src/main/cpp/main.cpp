@@ -83,6 +83,10 @@ void android_main(struct android_app* pApp) {
   auto rsci = RefSpace::make_create_info();
   auto local = ssn->create_refspace(rsci);
 
+  auto vcv = inst->get_view_config_view(0);
+  auto scci = Swapchain::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
+  auto sc = ssn->create_swapchain(scci);
+
   // Set input event filters (set it to NULL if the app wants to process all inputs).
   // Note that for key inputs, this example uses the default default_key_filter()
   // implemented in android_native_app_glue.c.

@@ -170,9 +170,16 @@ class RefSpace : public Space {
 class Swapchain {
  public:
   using CreateInfo = XrSwapchainCreateInfo;
+  static constexpr XrStructureType CIST = XR_TYPE_SWAPCHAIN_CREATE_INFO;
+  static constexpr int64_t SRGB_A = GL_SRGB8_ALPHA8;
+  static constexpr uint64_t UsageSampled = XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
+  static constexpr uint64_t UsageColorAttachment = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
   Swapchain(Session* ssn_, XrSwapchain swapchain_, const CreateInfo& ci_);
   ~Swapchain();
 
+  static CreateInfo make_create_info(uint32_t width, uint32_t height, int64_t format = SRGB_A) {
+    return {CIST, nullptr, 0, UsageSampled | UsageColorAttachment, format, 1, width, height, 1, 1, 1};
+  }
  private:
   Session* ssn;
   XrSwapchain swapchain;
