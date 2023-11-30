@@ -2,6 +2,9 @@
 #define ANDROIDGLINVESTIGATIONS_RENDERER_H
 
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
 
 #include <memory>
 
@@ -18,11 +21,9 @@ class Renderer {
   inline Renderer(android_app* pApp)
       : app_(pApp),
         display_(EGL_NO_DISPLAY),
+        config_(0),
         surface_(EGL_NO_SURFACE),
-        context_(EGL_NO_CONTEXT),
-        width_(0),
-        height_(0),
-        shaderNeedsNewProjectionMatrix_(true) {
+        context_(EGL_NO_CONTEXT) {
     initRenderer();
   }
 
@@ -76,10 +77,6 @@ class Renderer {
   EGLConfig config_;
   EGLSurface surface_;
   EGLContext context_;
-  EGLint width_;
-  EGLint height_;
-
-  bool shaderNeedsNewProjectionMatrix_;
 
   std::unique_ptr<Shader> shader_;
   std::vector<Model> models_;

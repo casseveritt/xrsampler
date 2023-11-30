@@ -12,9 +12,11 @@
 #include "TextureAsset.h"
 #include "Utility.h"
 
+using namespace std;
+
 //! executes glGetString and outputs the result to logcat
 #define PRINT_GL_STRING(s) \
-  { aout << #s ": " << glGetString(s) << std::endl; }
+  { aout << #s ": " << glGetString(s) << endl; }
 
 /*!
  * @brief if glGetString returns a space separated list of elements, prints each one on a new line
@@ -25,14 +27,14 @@
  */
 #define PRINT_GL_STRING_AS_LIST(s)                                                              \
   {                                                                                             \
-    std::istringstream extensionStream((const char*)glGetString(s));                            \
-    std::vector<std::string> extensionList(std::istream_iterator<std::string>{extensionStream}, \
-                                           std::istream_iterator<std::string>());               \
+    istringstream extensionStream((const char*)glGetString(s));                            \
+    vector<string> extensionList(istream_iterator<string>{extensionStream}, \
+                                           istream_iterator<string>());               \
     aout << #s ":\n";                                                                           \
     for (auto& extension : extensionList) {                                                     \
       aout << extension << "\n";                                                                \
     }                                                                                           \
-    aout << std::endl;                                                                          \
+    aout << endl;                                                                          \
   }
 
 //! Color for cornflower blue. Can be sent directly to glClearColor
@@ -103,31 +105,6 @@ Renderer::~Renderer() {
 }
 
 void Renderer::render() {
-  // Check to see if the surface has changed size. This is _necessary_ to do every frame when
-  // using immersive mode as you'll get no other notification that your renderable area has
-  // changed.
-  updateRenderArea();
-
-  // When the renderable area changes, the projection matrix has to also be updated. This is true
-  // even if you change from the sample orthographic projection matrix as your aspect ratio has
-  // likely changed.
-  if (shaderNeedsNewProjectionMatrix_) {
-    // a placeholder projection matrix allocated on the stack. Column-major memory layout
-    float projectionMatrix[16] = {0};
-
-    // build an orthographic projection matrix for 2d rendering
-    Utility::buildOrthographicMatrix(projectionMatrix, kProjectionHalfHeight, float(width_) / height_, kProjectionNearPlane,
-                                     kProjectionFarPlane);
-
-    // send the matrix to the shader
-    // Note: the shader must be active for this to work. Since we only have one shader for this
-    // demo, we can assume that it's active.
-    shader_->setProjectionMatrix(projectionMatrix);
-
-    // make sure the matrix isn't generated every frame
-    shaderNeedsNewProjectionMatrix_ = false;
-  }
-
   // clear the color buffer
   glClear(GL_COLOR_BUFFER_BIT);
 
@@ -139,10 +116,6 @@ void Renderer::render() {
       shader_->drawModel(model);
     }
   }
-
-  // Present the rendered image. This is an implicit glFlush.
-  auto swapResult = eglSwapBuffers(display_, surface_);
-  assert(swapResult == EGL_TRUE);
 }
 
 void Renderer::initRenderer() {
@@ -165,59 +138,95 @@ void Renderer::initRenderer() {
   auto display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   eglInitialize(display, nullptr, nullptr);
 
-  // figure out how many configs there are
-  EGLint numConfigs;
-  eglChooseConfig(display, attribs, nullptr, 0, &numConfigs);
+  EGLint numConfigs = 0;
+  if (eglGetConfigs(display, nullptr, 0, &numConfigs) == EGL_FALSE) {
+    aout << "eglGetConfigs() failed" << endl;
+    return;
+  }
+  vector<EGLConfig> configs(numConfigs);
+  if (eglGetConfigs(display, configs.data(), numConfigs, &numConfigs) == EGL_FALSE) {
+    aout << "eglGetConfigs() failed" << endl;
+    return;
+  }
+  const EGLint configAttribs[] = {EGL_RED_SIZE,
+                                  8,
+                                  EGL_GREEN_SIZE,
+                                  8,
+                                  EGL_BLUE_SIZE,
+                                  8,
+                                  EGL_ALPHA_SIZE,
+                                  8,  // need alpha for alpha blending layers
+                                  EGL_DEPTH_SIZE,
+                                  0,
+                                  EGL_STENCIL_SIZE,
+                                  0,
+                                  EGL_SAMPLES,
+                                  0,
+                                  EGL_NONE};
+  EGLConfig config = 0;
+  for (int i = 0; i < numConfigs; i++) {
+    auto& cfg = configs[i];
+    EGLint value = 0;
 
-  // get the list of configurations
-  std::unique_ptr<EGLConfig[]> supportedConfigs(new EGLConfig[numConfigs]);
-  eglChooseConfig(display, attribs, supportedConfigs.get(), numConfigs, &numConfigs);
-
-  // Find a config we like.
-  // Could likely just grab the first if we don't care about anything else in the config.
-  // Otherwise hook in your own heuristic
-  auto config = *std::find_if(supportedConfigs.get(), supportedConfigs.get() + numConfigs, [&display](const EGLConfig& config) {
-    EGLint red, green, blue, depth;
-    if (eglGetConfigAttrib(display, config, EGL_RED_SIZE, &red) && eglGetConfigAttrib(display, config, EGL_GREEN_SIZE, &green) &&
-        eglGetConfigAttrib(display, config, EGL_BLUE_SIZE, &blue) &&
-        eglGetConfigAttrib(display, config, EGL_DEPTH_SIZE, &depth)) {
-      aout << "Found config with " << red << ", " << green << ", " << blue << ", " << depth << std::endl;
-      return red == 8 && green == 8 && blue == 8 && depth == 24;
+    eglGetConfigAttrib(display, cfg, EGL_RENDERABLE_TYPE, &value);
+    if ((value & EGL_OPENGL_ES3_BIT_KHR) != EGL_OPENGL_ES3_BIT_KHR) {
+      continue;
     }
-    return false;
-  });
 
-  aout << "Found " << numConfigs << " configs" << std::endl;
-  aout << "Chose " << config << std::endl;
-  config_ = config;
+    // The pbuffer config also needs to be compatible with normal window rendering
+    // so it can share textures with the window context.
+    eglGetConfigAttrib(display, cfg, EGL_SURFACE_TYPE, &value);
+    if ((value & EGL_PBUFFER_BIT) != EGL_PBUFFER_BIT) {
+      continue;
+    }
 
-  // create the proper window surface
-  EGLint format;
-  eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-  EGLSurface surface = eglCreateWindowSurface(display, config, app_->window, nullptr);
+    int j = 0;
+    for (; configAttribs[j] != EGL_NONE; j += 2) {
+      eglGetConfigAttrib(display, cfg, configAttribs[j], &value);
+      if (value != configAttribs[j + 1]) {
+        break;
+      }
+    }
+    if (configAttribs[j] == EGL_NONE) {
+      config = configs[i];
+      break;
+    }
+  }
+  if (config == 0) {
+    aout << "failed to find suitable EGLConfig" << endl;
+    return;
+  }
 
-  // Create a GLES 3 context
   EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
-  EGLContext context = eglCreateContext(display, config, nullptr, contextAttribs);
-
-  // get some window metrics
-  auto madeCurrent = eglMakeCurrent(display, surface, surface, context);
-  assert(madeCurrent);
+  EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
+  if (context == EGL_NO_CONTEXT) {
+    aout << "eglCreateContext() failed" << endl;
+    return;
+  }
+  const EGLint surfaceAttribs[] = {EGL_WIDTH, 16, EGL_HEIGHT, 16, EGL_NONE};
+  EGLSurface vestigialSurface = eglCreatePbufferSurface(display, config, surfaceAttribs);
+  if (vestigialSurface == EGL_NO_SURFACE) {
+    aout << "eglCreatePbufferSurface() failed" << endl;
+    eglDestroyContext(display, context);
+    return;
+  }
+  if (eglMakeCurrent(display, vestigialSurface, vestigialSurface, context) == EGL_FALSE) {
+    aout << "eglMakeCurrent() failed" << endl;
+    eglDestroySurface(display, vestigialSurface);
+    eglDestroyContext(display, context);
+    return;
+  }
 
   display_ = display;
-  surface_ = surface;
+  surface_ = vestigialSurface;
   context_ = context;
-
-  // make width and height invalid so it gets updated the first frame in @a updateRenderArea()
-  width_ = -1;
-  height_ = -1;
 
   PRINT_GL_STRING(GL_VENDOR);
   PRINT_GL_STRING(GL_RENDERER);
   PRINT_GL_STRING(GL_VERSION);
   PRINT_GL_STRING_AS_LIST(GL_EXTENSIONS);
 
-  shader_ = std::unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
+  shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
   assert(shader_);
 
   // Note: there's only one shader in this demo, so I'll activate it here. For a more complex game
@@ -235,42 +244,25 @@ void Renderer::initRenderer() {
   createModels();
 }
 
-void Renderer::updateRenderArea() {
-  EGLint width;
-  eglQuerySurface(display_, surface_, EGL_WIDTH, &width);
-
-  EGLint height;
-  eglQuerySurface(display_, surface_, EGL_HEIGHT, &height);
-
-  if (width != width_ || height != height_) {
-    width_ = width;
-    height_ = height;
-    glViewport(0, 0, width, height);
-
-    // make sure that we lazily recreate the projection matrix before we render
-    shaderNeedsNewProjectionMatrix_ = true;
-  }
-}
-
 /**
  * @brief Create any demo models we want for this demo.
  */
 void Renderer::createModels() {
   /*
    * This is a square:
-   * 0 --- 1
-   * | \   |
-   * |  \  |
-   * |   \ |
    * 3 --- 2
+   * |   / |
+   * |  /  |
+   * | /   |
+   * 0 --- 1
    */
-  std::vector<Vertex> vertices = {
+  vector<Vertex> vertices = {
       Vertex(Vector3{1, 1, 0}, Vector2{0, 0}),    // 0
       Vertex(Vector3{-1, 1, 0}, Vector2{1, 0}),   // 1
       Vertex(Vector3{-1, -1, 0}, Vector2{1, 1}),  // 2
       Vertex(Vector3{1, -1, 0}, Vector2{0, 1})    // 3
   };
-  std::vector<Index> indices = {0, 1, 2, 0, 2, 3};
+  vector<Index> indices = {0, 1, 2, 0, 2, 3};
 
   // loads an image and assigns it to the square.
   //
@@ -341,7 +333,7 @@ void Renderer::handleInput() {
       default:
         aout << "Unknown MotionEvent Action: " << action;
     }
-    aout << std::endl;
+    aout << endl;
   }
   // clear the motion input count in this buffer for main thread to re-use.
   android_app_clear_motion_events(inputBuffer);
@@ -364,7 +356,7 @@ void Renderer::handleInput() {
       default:
         aout << "Unknown KeyEvent Action: " << keyEvent.action;
     }
-    aout << std::endl;
+    aout << endl;
   }
   // clear the key input count too.
   android_app_clear_key_events(inputBuffer);

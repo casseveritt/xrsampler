@@ -34,10 +34,9 @@ Shader* Shader::loadShader(const std::string& vertexSource, const std::string& f
 
       // If we fail to link the shader program, log the result for debugging
       if (logLength) {
-        GLchar* log = new GLchar[logLength];
-        glGetProgramInfoLog(program, logLength, nullptr, log);
-        aout << "Failed to link program with:\n" << log << std::endl;
-        delete[] log;
+        std::vector<GLchar> log(logLength + 1, 0);
+        glGetProgramInfoLog(program, logLength, nullptr, log.data());
+        aout << "Failed to link program with:\n" << log.data() << std::endl;
       }
 
       glDeleteProgram(program);
@@ -82,10 +81,9 @@ GLuint Shader::loadShader(GLenum shaderType, const std::string& shaderSource) {
       glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLength);
 
       if (infoLength) {
-        auto* infoLog = new GLchar[infoLength];
-        glGetShaderInfoLog(shader, infoLength, nullptr, infoLog);
-        aout << "Failed to compile with:\n" << infoLog << std::endl;
-        delete[] infoLog;
+        std::vector<GLchar> infoLog(infoLength + 1, 0);
+        glGetShaderInfoLog(shader, infoLength, nullptr, infoLog.data());
+        aout << "Failed to compile with:\n" << infoLog.data() << std::endl;
       }
 
       glDeleteShader(shader);
