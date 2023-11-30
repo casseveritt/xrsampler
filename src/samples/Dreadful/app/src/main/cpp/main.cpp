@@ -121,7 +121,7 @@ void android_main(struct android_app* pApp) {
   }
 
   Xr xr;
-  
+
   XrVector3f xv3{1, 2, 3};
   Vector3f v3 = xv3;
   v3.Normalize();
@@ -129,6 +129,8 @@ void android_main(struct android_app* pApp) {
   XrQuaternionf xq{0, 0, 0, 1};
   Quatf q = xq;
   XrQuaternionf xqb = q;
+  Posef p;
+  XrPosef xp = p;
 
   // Set input event filters (set it to NULL if the app wants to process all inputs).
   // Note that for key inputs, this example uses the default default_key_filter()

@@ -110,9 +110,7 @@ struct Vec2 {
   static const int N = 2;
 
   Vec2() : x(0), y(0) {}
-
   Vec2(const T* tp) : x(tp[0]), y(tp[1]) {}
-
   Vec2(T x_, T y_) : x(x_), y(y_) {}
 
   union {
@@ -288,20 +286,9 @@ class Vec3 {
   typedef T ElementType;
   static const int N = 3;
 
-  Vec3() {
-    x = y = z = 0.f;
-  }
-  Vec3(const T* tp) {
-    x = tp[0];
-    y = tp[1];
-    z = tp[2];
-  }
-
-  Vec3(T x_, T y_, T z_) {
-    v[0] = x_;
-    v[1] = y_;
-    v[2] = z_;
-  }
+  Vec3() : x(0), y(0), z(0) {}
+  Vec3(const T* tp) : x(tp[0]), y(tp[1]), z(tp[2]) {}
+  Vec3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
 
   void GetValue(T& x_, T& y_, T& z_) const {
     x_ = v[0];
@@ -536,28 +523,10 @@ class Vec4 {
   typedef T ElementType;
   static const int N = 4;
 
-  Vec4() {
-    x = y = z = 0.f;
-    w = 1.f;
-  }
-  Vec4(const T* tp) {
-    x = tp[0];
-    y = tp[1];
-    z = tp[2];
-    w = tp[3];
-  }
-  Vec4(const Vec3<T>& t, T fourth) {
-    v[0] = t.x;
-    v[1] = t.y;
-    v[2] = t.z;
-    v[3] = fourth;
-  }
-  Vec4(T x_, T y_, T z_ = 0, T w_ = 1) {
-    v[0] = x_;
-    v[1] = y_;
-    v[2] = z_;
-    v[3] = w_;
-  }
+  Vec4() : x(0), y(0), z(0), w(1) {}
+  Vec4(const T* tp) : x(tp[0]), y(tp[1]), z(tp[2]), w(tp[3]) {}
+  Vec4(const Vec3<T>& t, T fourth) : x(t.x), y(t.y), z(t.z), w(fourth) {}
+  Vec4(T x_, T y_, T z_ = 0, T w_ = 1) : x(x_), y(y_), z(z_), w(w_) {}
 
   void GetValue(T& x_, T& y_, T& z_, T& w_) const {
     x_ = v[0];
@@ -1509,7 +1478,7 @@ inline Vec4<T> operator*(const Vec4<T>& v, const Matrix4<T>& m) {
 }
 
 template <typename T>
-inline Matrix4<T> ToMatrix4(const Matrix3<T>& m3) {
+inline Matrix4<T> FromMatrix3(const Matrix3<T>& m3) {
   Matrix4<T> m4;
   m4(0, 0) = m3(0, 0);
   m4(0, 1) = m3(0, 1);
@@ -1550,18 +1519,9 @@ class Quaternion {
  public:
   typedef T ElementType;
 
-  Quaternion() {
-    q[0] = q[1] = q[2] = 0.0;
-    q[3] = R3_ONE;
-  }
-
-  Quaternion(const T* v) {
-    SetValue(v);
-  }
-
-  Quaternion(T q0, T q1, T q2, T q3) {
-    SetValue(q0, q1, q2, q3);
-  }
+  Quaternion() : x(0), y(0), z(0), w(1) {}
+  Quaternion(const T* v) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+  Quaternion(T q0, T q1, T q2, T q3) : x(q0), y(q1), z(q2), w(q3) {}
 
   Quaternion(const Matrix4<T>& m) {
     SetValue(m);
@@ -1649,7 +1609,7 @@ class Quaternion {
   void GetValue(Matrix4<T>& m) const {
     Matrix3<T> m3;
     GetValue(m3);
-    m = ToMatrix4(m3);
+    m = FromMatrix3(m3);
   }
 
   Matrix3<T> GetMatrix3() const {
@@ -1665,8 +1625,10 @@ class Quaternion {
   }
 
   Quaternion& SetValue(const T* qp) {
-    memcpy(q, qp, sizeof(T) * 4);
-
+    q[0] = qp[0];
+    q[1] = qp[1];
+    q[2] = qp[2];
+    q[3] = qp[3];
     return *this;
   }
 
@@ -1919,7 +1881,7 @@ class Quaternion {
   }
 
   static Quaternion Identity() {
-    static const Quaternion ident(Vec3<T>(0.0, 0.0, 0.0), R3_ONE);
+    static const Quaternion ident(Vec3<T>(T(0), T(0), T(0)), T(R3_ONE));
     return ident;
   }
 
@@ -2170,6 +2132,8 @@ struct Pose {
   Q r;
   V t;
 
+  // Default constructors are identity quat and zero vector,
+  // which is identity for a Pose.
   Pose() {}
 
   Pose(const Pose& p) : r(p.r), t(p.t) {}
