@@ -2,7 +2,6 @@
 
 #include "AndroidOut.h"
 #include "Model.h"
-#include "Utility.h"
 
 Shader* Shader::loadShader(const std::string& vertexSource, const std::string& fragmentSource,
                            const std::string& positionAttributeName, const std::string& uvAttributeName,
@@ -64,7 +63,6 @@ Shader* Shader::loadShader(const std::string& vertexSource, const std::string& f
 }
 
 GLuint Shader::loadShader(GLenum shaderType, const std::string& shaderSource) {
-  Utility::assertGlError();
   GLuint shader = glCreateShader(shaderType);
   if (shader) {
     auto* shaderRawString = (GLchar*)shaderSource.c_str();
@@ -103,23 +101,11 @@ void Shader::deactivate() const {
 
 void Shader::drawModel(const Model& model) const {
   // The position attribute is 3 floats
-  glVertexAttribPointer(position_,             // attrib
-                        3,                     // elements
-                        GL_FLOAT,              // of type float
-                        GL_FALSE,              // don't normalize
-                        sizeof(Vertex),        // stride is Vertex bytes
-                        model.getVertexData()  // pull from the start of the vertex data
-  );
+  glVertexAttribPointer(position_, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), model.getVertexData());
   glEnableVertexAttribArray(position_);
 
   // The uv attribute is 2 floats
-  glVertexAttribPointer(uv_,                                                 // attrib
-                        2,                                                   // elements
-                        GL_FLOAT,                                            // of type float
-                        GL_FALSE,                                            // don't normalize
-                        sizeof(Vertex),                                      // stride is Vertex bytes
-                        ((uint8_t*)model.getVertexData()) + sizeof(Vector3)  // offset Vector3 from the start
-  );
+  glVertexAttribPointer(uv_, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((uint8_t*)model.getVertexData()) + sizeof(Vector3));
   glEnableVertexAttribArray(uv_);
 
   // Setup the texture

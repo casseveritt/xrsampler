@@ -3,7 +3,6 @@
 #include <android/imagedecoder.h>
 
 #include "AndroidOut.h"
-#include "Utility.h"
 
 std::shared_ptr<TextureAsset> TextureAsset::loadAsset(AAssetManager* assetManager, const std::string& assetPath) {
   // Get the image from asset manager
@@ -12,7 +11,6 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(AAssetManager* assetManage
   // Make a decoder to turn it into a texture
   AImageDecoder* pAndroidDecoder = nullptr;
   auto result = AImageDecoder_createFromAAsset(pAndroidRobotPng, &pAndroidDecoder);
-  assert(result == ANDROID_IMAGE_DECODER_SUCCESS);
 
   // make sure we get 8 bits per channel out. RGBA order.
   AImageDecoder_setAndroidBitmapFormat(pAndroidDecoder, ANDROID_BITMAP_FORMAT_RGBA_8888);
@@ -29,7 +27,6 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(AAssetManager* assetManage
   // Get the bitmap data of the image
   auto upAndroidImageData = std::make_unique<std::vector<uint8_t>>(height * stride);
   auto decodeResult = AImageDecoder_decodeImage(pAndroidDecoder, upAndroidImageData->data(), stride, upAndroidImageData->size());
-  assert(decodeResult == ANDROID_IMAGE_DECODER_SUCCESS);
 
   // Get an opengl texture
   GLuint textureId;

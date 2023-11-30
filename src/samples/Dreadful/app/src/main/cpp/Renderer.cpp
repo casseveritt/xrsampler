@@ -10,7 +10,6 @@
 #include "AndroidOut.h"
 #include "Shader.h"
 #include "TextureAsset.h"
-#include "Utility.h"
 
 using namespace std;
 
@@ -227,7 +226,6 @@ void Renderer::initRenderer() {
   PRINT_GL_STRING_AS_LIST(GL_EXTENSIONS);
 
   shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
-  assert(shader_);
 
   // Note: there's only one shader in this demo, so I'll activate it here. For a more complex game
   // you'll want to track the active shader and activate/deactivate it as necessary
