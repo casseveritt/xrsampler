@@ -69,7 +69,7 @@ XrSystemProperties get_system_properties(XrInstance inst, XrSystemId sysid) {
   return sysprops;
 }
 
-vector<XrExtensionProperties> enum_extensions() {
+vector<XrExtensionProperties> enumerate_extensions() {
   uint32_t ext_count = 0;
   auto res = xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
   if (res != XR_SUCCESS && ext_count == 0) {
@@ -122,7 +122,7 @@ void Instance::add_desired_extension(const char* extName, uint32_t ver) {
 }
 
 bool Instance::create() {
-  ext.available = enum_extensions();
+  ext.available = ::enumerate_extensions();
   ext.enabled.clear();
   bool foundRequired = true;
   for (auto& req : ext.required) {
@@ -154,6 +154,7 @@ bool Instance::create() {
   inst = XR_NULL_HANDLE;
   auto res = XRH(xrCreateInstance(&ci, &inst));
   if (inst == XR_NULL_HANDLE) {
+    aout << "XrInstance creation failed." << endl;
     return false;
   }
 
