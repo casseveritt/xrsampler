@@ -13,7 +13,6 @@ add_library(dreadful SHARED
         Renderer.cpp
         Shader.cpp
         TextureAsset.cpp
-        Utility.cpp
         xrh.cpp)
 
 # Searches for a package provided by the game activity dependency
