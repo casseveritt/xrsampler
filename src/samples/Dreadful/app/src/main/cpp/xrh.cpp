@@ -239,7 +239,7 @@ Session* Instance::create_session() {
 
   auto res = XRH(xrCreateSession(inst, &ci, &sess));
   if (sess == XR_NULL_HANDLE) {
-    aout << "Failed to create XR session" << endl;
+    aout << "XrSession creation failed." << endl;
     return nullptr;
   }
   return new Session(this, sess);
@@ -282,6 +282,23 @@ Swapchain* Session::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
     aout << "Swapchain creation failed." << endl;
   }
   return new Swapchain(this, sc, createInfo);
+}
+
+void Session::begin_frame() {
+  XrFrameWaitInfo wfi{XR_TYPE_FRAME_WAIT_INFO};
+  fs = {XR_TYPE_FRAME_STATE};
+  XRH(xrWaitFrame(ssn, &fwi, &fs));
+  XrFrameBeginInfo fbi{XR_TYPE_FRAME_BEGIN_INFO};
+  XRH(xrBeginFrame(ssn, &fbi));
+}
+
+void Session::end_frame() {
+  XrFrameEndInfo fei{XR_TYPE_FRAME_END_INFO};
+  fei.dispayTime = fwi.predictedDisplayTime;
+  fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
+  fei.layerCount = 0;
+  fei.layers = nullptr;
+  XRH(xrEndFrame(ssn, &fei));
 }
 
 Space::Space(Session* ssn_, XrSpace space_, Space::Type type_) : ssn(ssn_), space(space_), type(type_) {}

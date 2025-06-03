@@ -110,6 +110,9 @@ class Session {
   Space* create_refspace(const XrReferenceSpaceCreateInfo& createInfo);
   Swapchain* create_swapchain(const XrSwapchainCreateInfo& createInfo);
 
+  void begin_frame();
+  void end_frame();
+
  private:
   Instance* inst;
   XrSession ssn;
