@@ -250,7 +250,7 @@ Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
   XRH(xrEnumerateReferenceSpaces(ssn, 0, &numRefSpaces, nullptr));
   vector<XrReferenceSpaceType> refspaces(numRefSpaces);
   XRH(xrEnumerateReferenceSpaces(ssn, refspaces.size(), &numRefSpaces, refspaces.data()));
-
+  state = XR_SESSION_STATE_UNKNOWN;
   for (auto rst : refspaces) {
     refspacetypes.insert(rst);
   }
@@ -284,7 +284,41 @@ Swapchain* Session::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
   return new Swapchain(this, sc, createInfo);
 }
 
-void Session::begin_frame() {
+bool Session::begin_frame() {
+
+  XrEventDataBuffer edb{XR_TYPE_EVENT_DATA_BUFFER};
+  XRH(xrPollEvent(inst->get_instance(), &edb));
+  switch(edb.type) {
+    case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
+      auto& ssc = *reinterpret_cast<XrEventDataSessionStateChanged*>(&edb);
+      state = ssc.state;
+      switch(state) {
+        case XR_SESSION_STATE_READY: {
+          XrSessionBeginInfo sbi{XR_TYPE_SESSION_BEGIN_INFO};
+          sbi.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+          XRH(xrBeginSession(ssn, &sbi));
+        } break;
+        case XR_SESSION_STATE_STOPPING:
+          XRH(xrEndSession(ssn));
+          break;
+        default:
+          break;
+      }
+    } break;
+    default:
+      break;
+  }
+
+  switch(state) {
+    case XR_SESSION_STATE_VISIBLE:
+    case XR_SESSION_STATE_SYNCHRONIZED:
+    case XR_SESSION_STATE_FOCUSED:
+      break;
+    default:
+      return false;
+  }
+
+
   XrFrameWaitInfo wfi{XR_TYPE_FRAME_WAIT_INFO};
   fs = {XR_TYPE_FRAME_STATE};
   XRH(xrWaitFrame(ssn, &fwi, &fs));
