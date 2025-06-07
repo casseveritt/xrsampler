@@ -4,7 +4,6 @@
             "name": "Android",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/include",
                 "${userHome}/.gradle/caches/transforms-*/files-*/**/include"
             ],
             "defines": [

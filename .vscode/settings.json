@@ -1,3 +1,5 @@
 {
-    "cmake.configureOnOpen": true
+    "cmake.cmakePath": "${env:ANDROID_HOME}/cmake/3.22.1/bin/cmake",
+    "cmake.configureOnOpen": true,
+    "C_Cpp.default.compilerPath": "/home/cass/src/xrsampler/.vscode/c_cpp_properties.json"
 }
