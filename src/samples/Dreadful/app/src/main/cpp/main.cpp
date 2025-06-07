@@ -3,7 +3,6 @@
 
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
-#include <memory>
 
 #include "AndroidOut.h"
 #include "Renderer.h"
@@ -71,7 +70,7 @@ struct Xr {
 #endif
   {
     // instance
-    inst = make_unique<Instance>();
+    inst = make_instance();
     inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
     if (!inst->create()) {
       aout << "OpenXR instance creation failed, exiting." << endl;
@@ -84,27 +83,20 @@ struct Xr {
     ssn = inst->create_session();
 
     // local space
-    auto rsci = RefSpace::make_create_info();
+    auto rsci = RefSpace::element_type::make_create_info();
     local = ssn->create_refspace(rsci);
 
     // swapchain
-    auto vcv = inst->get_view_config_view(0);
-    auto scci = Swapchain::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
+    auto vcv = inst->get_xr_view_config_view(0);
+    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
     sc = ssn->create_swapchain(scci);
     return true;
   }
 
-  void destroy() {
-    delete sc;
-    delete local;
-    delete ssn;
-    inst.reset();
-  }
-
-  unique_ptr<Instance> inst;
-  Session* ssn = nullptr;
-  Space* local = nullptr;
-  Swapchain* sc = nullptr;
+  Instance inst;
+  Session ssn;
+  Space local;
+  Swapchain sc;
 };
 
 }  // namespace
@@ -154,6 +146,5 @@ void android_main(struct android_app* pApp) {
       pRenderer->render();
     }
   } while (!pApp->destroyRequested);
-  xr.destroy();
 }
 }

@@ -135,19 +135,23 @@ bool init_loader(JavaVM* vm, jobject ctx) {
   return true;
 }
 
-Instance::Instance() {}
+Instance make_instance() {
+  return make_shared<Instance::element_type>();
+}
 
-Instance::~Instance() {}
+InstanceOb::InstanceOb() {}
 
-void Instance::add_required_extension(const char* extName, uint32_t ver) {
+InstanceOb::~InstanceOb() {}
+
+void InstanceOb::add_required_extension(const char* extName, uint32_t ver) {
   ext.required.push_back(make_ext_prop(extName, ver));
 }
 
-void Instance::add_desired_extension(const char* extName, uint32_t ver) {
+void InstanceOb::add_desired_extension(const char* extName, uint32_t ver) {
   ext.desired.push_back(make_ext_prop(extName, ver));
 }
 
-bool Instance::create() {
+bool InstanceOb::create() {
   ext.available = ::enumerate_extensions();
   ext.enabled.clear();
   bool foundRequired = true;
@@ -238,7 +242,7 @@ bool Instance::create() {
   return succeeded;
 }
 
-void Instance::destroy() {
+void InstanceOb::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
@@ -247,7 +251,7 @@ void Instance::destroy() {
 }
 
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-void Instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
+void InstanceOb::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
   gfxbinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR};
   gfxbinding.display = dpy;
   gfxbinding.config = cfg;
@@ -255,7 +259,7 @@ void Instance::set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx) {
 }
 #endif
 
-Session* Instance::create_session() {
+Session InstanceOb::create_session() {
   XrSessionCreateInfo ci = {XR_TYPE_SESSION_CREATE_INFO};
   ci.next = &gfxbinding;
   ci.createFlags = 0;
@@ -268,10 +272,10 @@ Session* Instance::create_session() {
     aout << "XrSession creation failed." << endl;
     return nullptr;
   }
-  return new Session(this, sess);
+  return std::make_shared<SessionOb>(Instance(this), sess);
 }
 
-Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
+SessionOb::SessionOb(Instance inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
   uint32_t numRefSpaces = 0;
   XRH(xrEnumerateReferenceSpaces(ssn, 0, &numRefSpaces, nullptr));
   vector<XrReferenceSpaceType> refspaces(numRefSpaces);
@@ -282,11 +286,11 @@ Session::Session(Instance* inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
   }
 }
 
-Session::~Session() {
+SessionOb::~SessionOb() {
   XRH(xrDestroySession(ssn));
 }
 
-Space* Session::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
+Space SessionOb::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
   if (refspacetypes.find(createInfo.referenceSpaceType) == refspacetypes.end()) {
     aout << "Unsupported reference space type." << endl;
     return nullptr;
@@ -298,21 +302,21 @@ Space* Session::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
     aout << "Reference space creation failed." << endl;
     return nullptr;
   }
-  return new RefSpace(this, spacehandle, createInfo);
+  return make_shared<RefSpace::element_type>(Session(this), spacehandle, createInfo);
 }
 
-Swapchain* Session::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
+Swapchain SessionOb::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
   XrSwapchain sc;
   auto res = XRH(xrCreateSwapchain(ssn, &createInfo, &sc));
   if (res != XR_SUCCESS) {
     aout << "Swapchain creation failed." << endl;
   }
-  return new Swapchain(this, sc, createInfo);
+  return make_shared<Swapchain::element_type>(Session(this), sc, createInfo);
 }
 
-bool Session::begin_frame() {
+bool SessionOb::begin_frame() {
   XrEventDataBuffer edb{XR_TYPE_EVENT_DATA_BUFFER};
-  XRH(xrPollEvent(inst->get_instance(), &edb));
+  XRH(xrPollEvent(inst->get_xr_instance(), &edb));
   switch (edb.type) {
     case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
       auto& ssc = *reinterpret_cast<XrEventDataSessionStateChanged*>(&edb);
@@ -354,7 +358,7 @@ bool Session::begin_frame() {
   return true;
 }
 
-void Session::end_frame() {
+void SessionOb::end_frame() {
   XrFrameEndInfo fei{XR_TYPE_FRAME_END_INFO};
   fei.displayTime = fs.predictedDisplayTime;
   fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
@@ -363,20 +367,21 @@ void Session::end_frame() {
   XRH(xrEndFrame(ssn, &fei));
 }
 
-Space::Space(Session* ssn_, XrSpace space_, Space::Type type_) : ssn(ssn_), space(space_), type(type_) {}
+SpaceOb::SpaceOb(Session ssn_, XrSpace space_, SpaceOb::Type type_) : ssn(ssn_), space(space_), type(type_) {}
 
-Space::~Space() {
+SpaceOb::~SpaceOb() {
   XRH(xrDestroySpace(space));
 }
 
-RefSpace::RefSpace(Session* ssn_, XrSpace space_, const CreateInfo& ci_) : Space(ssn_, space_, Space::Type::Reference), ci(ci_) {}
+RefSpaceOb::RefSpaceOb(Session ssn_, XrSpace space_, const CreateInfo& ci_)
+    : SpaceOb(ssn_, space_, SpaceOb::Type::Reference), ci(ci_) {}
 
-RefSpace::~RefSpace() {}
+RefSpaceOb::~RefSpaceOb() {}
 
-Swapchain::Swapchain(Session* ssn_, XrSwapchain swapchain_, const XrSwapchainCreateInfo& ci_)
+SwapchainOb::SwapchainOb(Session ssn_, XrSwapchain swapchain_, const XrSwapchainCreateInfo& ci_)
     : ssn(ssn_), swapchain(swapchain_), ci(ci_) {}
 
-Swapchain::~Swapchain() {
+SwapchainOb::~SwapchainOb() {
   XRH(xrDestroySwapchain(swapchain));
 }
 

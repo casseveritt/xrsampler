@@ -1,3 +1,6 @@
+// OpenXR Helper
+// Author: Cass Everitt
+
 #pragma once
 
 #if defined(ANDROID)
@@ -14,9 +17,25 @@
 #include <openxr/openxr_platform.h>
 
 #include <array>
+#include <memory>
 #include <set>
 #include <vector>
 namespace xrh {
+
+class InstanceOb;
+class SessionOb;
+class SpaceOb;
+class RefSpaceOb;
+class SwapchainOb;
+
+using Instance = std::shared_ptr<InstanceOb>;
+using Session = std::shared_ptr<SessionOb>;
+using Space = std::shared_ptr<SpaceOb>;
+using RefSpace = std::shared_ptr<RefSpaceOb>;
+using Swapchain = std::shared_ptr<SwapchainOb>;
+
+Instance make_instance();
+
 #if defined(ANDROID)
 // must be called before constructor
 bool init_loader(JavaVM* vm, jobject ctx);
@@ -26,11 +45,10 @@ constexpr XrVector3f ZeroVec3{0, 0, 0};
 constexpr XrQuaternionf IdentityQuat{0, 0, 0, 1};
 constexpr XrPosef IdentityPose{IdentityQuat, ZeroVec3};
 
-class Session;
-class Instance {
+class InstanceOb {
  public:
-  Instance();
-  ~Instance();
+  InstanceOb();
+  ~InstanceOb();
 
   void add_required_extension(const char* name, uint32_t ver = 1);
   void add_desired_extension(const char* name, uint32_t ver = 1);
@@ -44,23 +62,23 @@ class Instance {
 
   // only available after successful create:
 
-  XrInstance get_instance() const {
+  XrInstance get_xr_instance() const {
     return inst;
   }
 
-  XrInstanceProperties get_instance_properties() const {
+  XrInstanceProperties get_xr_instance_properties() const {
     return instprops;
   }
 
-  XrSystemId get_system_id() const {
+  XrSystemId get_xr_system_id() const {
     return sysid;
   }
 
-  XrSystemProperties get_system_properties() const {
+  XrSystemProperties get_xr_system_properties() const {
     return sysprops;
   }
 
-  std::vector<XrExtensionProperties> get_enabled_extensions() const {
+  std::vector<XrExtensionProperties> get_enabled_xr_extension_properties() const {
     return ext.enabled;
   }
 
@@ -68,9 +86,9 @@ class Instance {
   void set_gfx_binding(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx);
 #endif
 
-  Session* create_session();
+  Session create_session();
 
-  const XrViewConfigurationView& get_view_config_view(int eye) const {
+  const XrViewConfigurationView& get_xr_view_config_view(int eye) const {
     return view_config_views[std::clamp(eye, 0, 1)];
   }
 
@@ -95,33 +113,30 @@ class Instance {
   std::array<XrViewConfigurationView, 2> view_config_views;
 };
 
-class Space;
-class Swapchain;
-
-class Session {
+class SessionOb {
  public:
-  Session(Instance* inst_, XrSession ssn_);
-  ~Session();
+  SessionOb(Instance inst_, XrSession ssn_);
+  ~SessionOb();
 
-  const Instance* get_instance() const {
+  const Instance get_instance() const {
     return inst;
   }
 
-  Space* create_refspace(const XrReferenceSpaceCreateInfo& createInfo);
-  Swapchain* create_swapchain(const XrSwapchainCreateInfo& createInfo);
+  Space create_refspace(const XrReferenceSpaceCreateInfo& createInfo);
+  Swapchain create_swapchain(const XrSwapchainCreateInfo& createInfo);
 
   bool begin_frame();
   void end_frame();
 
  private:
-  Instance* inst;
+  Instance inst;
   XrSession ssn;
   XrFrameState fs;
   XrSessionState state;
   std::set<XrReferenceSpaceType> refspacetypes;
 };
 
-class Space {
+class SpaceOb {
  public:
   enum class Type {
     Reference = 0,
@@ -129,10 +144,10 @@ class Space {
     SpatialAnchor = 2,
   };
 
-  Space(Session* ssn_, XrSpace space_, Type type_);
-  ~Space();
+  SpaceOb(Session ssn_, XrSpace space_, Type type_);
+  ~SpaceOb();
 
-  const Session* get_session() const {
+  const Session get_session() const {
     return ssn;
   }
 
@@ -140,24 +155,24 @@ class Space {
     return type;
   }
 
-  XrSpace get_space() const {
+  XrSpace get_xr_space() const {
     return space;
   }
 
  private:
-  Session* ssn;
+  Session ssn;
   XrSpace space;
   Type type;
 };
 
-class RefSpace : public Space {
+class RefSpaceOb : public SpaceOb {
  public:
   using CreateInfo = XrReferenceSpaceCreateInfo;
   using RefType = XrReferenceSpaceType;
   static constexpr XrStructureType CIST = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
   static constexpr XrReferenceSpaceType Local = XR_REFERENCE_SPACE_TYPE_LOCAL;
-  RefSpace(Session* ssn_, XrSpace space_, const CreateInfo& ci_);
-  virtual ~RefSpace();
+  RefSpaceOb(Session ssn_, XrSpace space_, const CreateInfo& ci_);
+  virtual ~RefSpaceOb();
 
   RefType get_reftype() const {
     return reftype;
@@ -172,22 +187,22 @@ class RefSpace : public Space {
   CreateInfo ci;
 };
 
-class Swapchain {
+class SwapchainOb {
  public:
   using CreateInfo = XrSwapchainCreateInfo;
   static constexpr XrStructureType CIST = XR_TYPE_SWAPCHAIN_CREATE_INFO;
   static constexpr int64_t SRGB_A = GL_SRGB8_ALPHA8;
   static constexpr uint64_t UsageSampled = XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
   static constexpr uint64_t UsageColorAttachment = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-  Swapchain(Session* ssn_, XrSwapchain swapchain_, const CreateInfo& ci_);
-  ~Swapchain();
+  SwapchainOb(Session ssn_, XrSwapchain sc_, const CreateInfo& ci_);
+  ~SwapchainOb();
 
   static constexpr CreateInfo make_create_info(uint32_t width, uint32_t height, int64_t format = SRGB_A) {
     return {CIST, nullptr, 0, UsageSampled | UsageColorAttachment, format, 1, width, height, 1, 1, 1};
   }
 
  private:
-  Session* ssn;
+  Session ssn;
   XrSwapchain swapchain;
   CreateInfo ci;
   uint32_t chainlength;
