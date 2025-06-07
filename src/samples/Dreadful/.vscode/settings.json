@@ -1,4 +1,5 @@
 {
     "cmake.cmakePath": "${env:ANDROID_HOME}/cmake/3.22.1/bin/cmake",
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "C_Cpp.default.compilerPath": "/home/cass/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang++"
 }
