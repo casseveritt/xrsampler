@@ -71,7 +71,7 @@ struct Xr {
 #endif
   {
     // instance
-    inst = new Instance();
+    inst = make_unique<Instance>();
     inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
     if (!inst->create()) {
       aout << "OpenXR instance creation failed, exiting." << endl;
@@ -98,10 +98,10 @@ struct Xr {
     delete sc;
     delete local;
     delete ssn;
-    delete inst;
+    inst.reset();
   }
 
-  Instance* inst = nullptr;
+  unique_ptr<Instance> inst;
   Session* ssn = nullptr;
   Space* local = nullptr;
   Swapchain* sc = nullptr;

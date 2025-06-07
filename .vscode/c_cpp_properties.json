@@ -3,17 +3,18 @@
         {
             "name": "Android",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${userHome}/.gradle/caches/transforms-*/files-*/**/include"
             ],
             "defines": [
                 "ANDROID",
                 "XR_USE_GRAPHICS_API_OPENGL_ES=1",
                 "XR_USE_PLATFORM_ANDROID=1"
             ],
-            "compilerPath": "/usr/bin/clang++",
             "cStandard": "c11",
             "cppStandard": "c++20",
-            "intelliSenseMode": "linux-clang-x64"
+            "intelliSenseMode": "linux-clang-arm64"
         }
     ],
     "version": 4
