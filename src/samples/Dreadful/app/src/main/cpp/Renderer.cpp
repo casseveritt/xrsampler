@@ -24,16 +24,15 @@ using namespace std;
  * a vector -- each element of the vector is a new element in the input string. Finally a foreach
  * loop consumes this and outputs it to logcat using @a aout
  */
-#define PRINT_GL_STRING_AS_LIST(s)                                                              \
-  {                                                                                             \
-    istringstream extensionStream((const char*)glGetString(s));                            \
-    vector<string> extensionList(istream_iterator<string>{extensionStream}, \
-                                           istream_iterator<string>());               \
-    aout << #s ":\n";                                                                           \
-    for (auto& extension : extensionList) {                                                     \
-      aout << extension << "\n";                                                                \
-    }                                                                                           \
-    aout << endl;                                                                          \
+#define PRINT_GL_STRING_AS_LIST(s)                                                                       \
+  {                                                                                                      \
+    istringstream extensionStream((const char*)glGetString(s));                                          \
+    vector<string> extensionList(istream_iterator<string>{extensionStream}, istream_iterator<string>()); \
+    aout << #s ":\n";                                                                                    \
+    for (auto& extension : extensionList) {                                                              \
+      aout << extension << "\n";                                                                         \
+    }                                                                                                    \
+    aout << endl;                                                                                        \
   }
 
 //! Color for cornflower blue. Can be sent directly to glClearColor
@@ -271,6 +270,14 @@ void Renderer::createModels() {
 
   // Create a model and put it in the back of the render list.
   models_.emplace_back(vertices, indices, spAndroidRobotTexture);
+}
+
+void Renderer::setSwapchainImages(uint32_t width, uint32_t height, const std::span<GLuint>& images) {
+  // Populate the swapchainImages vector with the provided images
+  swapchainImages_.reserve(images.size());
+  for (auto& image : images) {
+    swapchainImages_.push_back({image, width, height});
+  }
 }
 
 void Renderer::handleInput() {

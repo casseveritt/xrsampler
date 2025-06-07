@@ -1,7 +1,5 @@
 #include "xrh.h"
 
-#include <span>
-
 #include "AndroidOut.h"
 
 using namespace std;
@@ -141,7 +139,9 @@ Instance make_instance() {
 
 InstanceOb::InstanceOb() {}
 
-InstanceOb::~InstanceOb() {}
+InstanceOb::~InstanceOb() {
+  destroy();
+}
 
 void InstanceOb::add_required_extension(const char* extName, uint32_t ver) {
   ext.required.push_back(make_ext_prop(extName, ver));
@@ -246,8 +246,8 @@ void InstanceOb::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
-  XRH(xrDestroyInstance(inst));
   inst = XR_NULL_HANDLE;
+  XRH(xrDestroyInstance(inst));
 }
 
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
@@ -379,7 +379,20 @@ RefSpaceOb::RefSpaceOb(Session ssn_, XrSpace space_, const CreateInfo& ci_)
 RefSpaceOb::~RefSpaceOb() {}
 
 SwapchainOb::SwapchainOb(Session ssn_, XrSwapchain swapchain_, const XrSwapchainCreateInfo& ci_)
-    : ssn(ssn_), swapchain(swapchain_), ci(ci_) {}
+    : ssn(ssn_), swapchain(swapchain_), ci(ci_) {
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  uint32_t imageCount = 0;
+  XRH(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
+  images.resize(imageCount);
+  vector<XrSwapchainImageOpenGLESKHR> imagesKHR(imageCount, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
+  XRH(xrEnumerateSwapchainImages(swapchain, imageCount, &imageCount,
+                                 reinterpret_cast<XrSwapchainImageBaseHeader*>(imagesKHR.data())));
+  for (uint32_t i = 0; i < imageCount; ++i) {
+    images[i] = imagesKHR[i].image;
+  }
+  chainlength = imageCount;
+#endif
+}
 
 SwapchainOb::~SwapchainOb() {
   XRH(xrDestroySwapchain(swapchain));

@@ -19,6 +19,7 @@
 #include <array>
 #include <memory>
 #include <set>
+#include <span>
 #include <vector>
 namespace xrh {
 
@@ -201,12 +202,27 @@ class SwapchainOb {
     return {CIST, nullptr, 0, UsageSampled | UsageColorAttachment, format, 1, width, height, 1, 1, 1};
   }
 
+  uint32_t get_width() const {
+    return ci.width;
+  }
+
+  uint32_t get_height() const {
+    return ci.height;
+  }
+
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  const std::span<GLuint> enumerate_images() {
+    return images;
+  }
+#endif
+
  private:
   Session ssn;
   XrSwapchain swapchain;
   CreateInfo ci;
   uint32_t chainlength;
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  std::vector<GLuint> images;
 #endif
 };
 

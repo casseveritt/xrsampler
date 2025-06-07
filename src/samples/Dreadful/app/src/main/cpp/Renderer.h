@@ -7,6 +7,7 @@
 #include <GLES3/gl3ext.h>
 
 #include <memory>
+#include <span>
 
 #include "Model.h"
 #include "Shader.h"
@@ -19,15 +20,19 @@ class Renderer {
    * @param pApp the android_app this Renderer belongs to, needed to configure GL
    */
   inline Renderer(android_app* pApp)
-      : app_(pApp),
-        display_(EGL_NO_DISPLAY),
-        config_(0),
-        surface_(EGL_NO_SURFACE),
-        context_(EGL_NO_CONTEXT) {
+      : app_(pApp), display_(EGL_NO_DISPLAY), config_(0), surface_(EGL_NO_SURFACE), context_(EGL_NO_CONTEXT) {
     initRenderer();
   }
 
   virtual ~Renderer();
+
+  /*!
+   * Sets the swap chain images for the renderer.
+   * @param width The width of the swap chain images.
+   * @param height The height of the swap chain images.
+   * @param images A span of GLuint handles representing the swap chain images.
+   */
+  void setSwapchainImages(uint32_t width, uint32_t height, const std::span<GLuint>& images);
 
   /*!
    * Handles input from the android_app.
@@ -80,6 +85,13 @@ class Renderer {
 
   std::unique_ptr<Shader> shader_;
   std::vector<Model> models_;
+
+  struct SwapchainImage {
+    GLuint textureId;
+    uint32_t width;
+    uint32_t height;
+  };
+  std::vector<SwapchainImage> swapchainImages_;
 };
 
 #endif  // ANDROIDGLINVESTIGATIONS_RENDERER_H

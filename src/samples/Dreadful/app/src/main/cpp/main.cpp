@@ -3,6 +3,7 @@
 
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
+#include <span>
 
 #include "AndroidOut.h"
 #include "Renderer.h"
@@ -93,6 +94,18 @@ struct Xr {
     return true;
   }
 
+  bool is_initialized() const {
+    return bool(inst);
+  }
+
+  bool begin_frame() {
+    return ssn->begin_frame();
+  }
+
+  void end_frame() {
+    ssn->end_frame();
+  }
+
   Instance inst;
   Session ssn;
   Space local;
@@ -135,8 +148,19 @@ void android_main(struct android_app* pApp) {
       // user data remember to change it here
       auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
 
-      if (xr.inst == nullptr) {
+      if (!xr.is_initialized()) {
         xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
+        // I need to get the swapchain, enumerate the images, and pass the corresponding
+        // texture objects to the renderer.
+
+        // Assuming Swapchain has a method enumerate_images() returning std::vector<GLuint>
+        const std::span<GLuint> textures = xr.sc->enumerate_images();
+        pRenderer->setSwapchainImages(xr.sc->get_width(), xr.sc->get_height(), textures);
+      }
+
+      if (!xr.begin_frame()) {
+        // We can't begin a frame until the session is in a valid state.
+        continue;
       }
 
       // Process game input
