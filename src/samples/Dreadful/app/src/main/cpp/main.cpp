@@ -1,5 +1,9 @@
+// This file is part of the OpenXR Dreadful sample application.
+// Author: Cass Everitt
+
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
+#include <memory>
 
 #include "AndroidOut.h"
 #include "Renderer.h"

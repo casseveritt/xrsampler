@@ -351,6 +351,7 @@ bool Session::begin_frame() {
   XRH(xrWaitFrame(ssn, &wfi, &fs));
   XrFrameBeginInfo fbi{XR_TYPE_FRAME_BEGIN_INFO};
   XRH(xrBeginFrame(ssn, &fbi));
+  return true;
 }
 
 void Session::end_frame() {

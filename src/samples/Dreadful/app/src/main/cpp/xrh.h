@@ -185,6 +185,7 @@ class Swapchain {
   static constexpr CreateInfo make_create_info(uint32_t width, uint32_t height, int64_t format = SRGB_A) {
     return {CIST, nullptr, 0, UsageSampled | UsageColorAttachment, format, 1, width, height, 1, 1, 1};
   }
+
  private:
   Session* ssn;
   XrSwapchain swapchain;
