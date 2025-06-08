@@ -387,9 +387,6 @@ void SessionOb::end_frame() {
   fei.displayTime = fs.predictedDisplayTime;
   fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
   fei.layerCount = static_cast<uint32_t>(layer_ptrs.size());
-  for (size_t i = 0; i < layer_ptrs.size(); ++i) {
-    aout << "Layer " << i << ": " << layer_ptrs[i]->type << endl;
-  }
   fei.layers = layer_ptrs.data();
   XRH(xrEndFrame(ssn, &fei));
   layers.clear();

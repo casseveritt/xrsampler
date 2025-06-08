@@ -185,7 +185,9 @@ void android_main(struct android_app* pApp) {
 
       // add a layer to be submitted at the end of the frame
       xrh::QuadLayer quad;
-      quad.set_pose(Posef(Quatf::Identity(), Vector3f(0, 0, -1)));
+      double t = xr.ssn->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
+
+      quad.set_pose(Posef(Quatf(Vector3f(0, 0, 1), t), Vector3f(0, 0, -1)));
       quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
       quad.set_swapchain(xr.sc);
       quad.set_space(xr.local);

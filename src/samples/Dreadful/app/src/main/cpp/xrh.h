@@ -173,6 +173,9 @@ class SessionOb {
   Swapchain create_swapchain(const XrSwapchainCreateInfo& createInfo);
 
   bool begin_frame();
+  XrTime get_predicted_display_time() const {
+    return fs.predictedDisplayTime;
+  }
   void add_layer(const Layer& layer);
   void end_frame();
 

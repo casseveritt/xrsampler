@@ -19,6 +19,9 @@ struct Vector3f : public r3::Vec3f {
 
 struct Quatf : public r3::Quaternionf {
   Quatf() = default;
+  Quatf(float x_, float y_, float z_, float w_) : r3::Quaternionf(x_, y_, z_, w_) {}
+  Quatf(const float* v) : r3::Quaternionf(v) {}
+  Quatf(const Vector3f& axis, float angle) : r3::Quaternionf(r3::Vec3f(axis), angle) {}
   Quatf(const XrQuaternionf& q) : r3::Quaternionf(&q.x) {}
   Quatf(const r3::Quaternionf& q) : r3::Quaternionf(q) {}
   operator XrQuaternionf() const {
