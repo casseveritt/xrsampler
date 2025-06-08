@@ -3,9 +3,13 @@
 #include "linear.h"
 #include "xrh.h"
 
+#pragma once
+
 namespace xrh {
 struct Vector3f : public r3::Vec3f {
-    Vector3f() = default;
+  Vector3f() = default;
+  Vector3f(float x_, float y_, float z_) : r3::Vec3f(x_, y_, z_) {}
+  Vector3f(const float* tp) : r3::Vec3f(tp) {}
   Vector3f(const XrVector3f& v) : r3::Vec3f(&v.x) {}
   Vector3f(const r3::Vec3f& v) : r3::Vec3f(v) {}
   operator XrVector3f() const {
@@ -24,6 +28,7 @@ struct Quatf : public r3::Quaternionf {
 
 struct Posef : public r3::Posef {
   Posef() = default;
+  Posef(const Quatf& r, const Vector3f& t) : r3::Posef(r3::Quaternionf(r), r3::Vec3f(t)) {}
   Posef(const XrPosef& p) : r3::Posef(Quatf(p.orientation), Vector3f(p.position)) {}
   operator XrPosef() const {
     return {Quatf(r), Vector3f(t)};

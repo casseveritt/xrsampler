@@ -38,13 +38,15 @@ class Renderer {
    * Handles input from the android_app.
    *
    * Note: this will clear the input queue
+   *
+   * TODO: Remove this from the renderer. It belongs in app logic.
    */
   void handleInput();
 
   /*!
-   * Renders all the models in the renderer
+   * Renders all the models in the renderer to the specified image.
    */
-  void render();
+  void render(uint32_t imageIndex);
 
   EGLDisplay getDisplay() {
     return display_;
@@ -91,7 +93,10 @@ class Renderer {
     uint32_t width;
     uint32_t height;
   };
-  std::vector<SwapchainImage> swapchainImages_;
+
+  std::vector<SwapchainImage> colorImages_;
+  std::vector<SwapchainImage> depthImages_;
+  GLuint fbo;
 };
 
 #endif  // ANDROIDGLINVESTIGATIONS_RENDERER_H

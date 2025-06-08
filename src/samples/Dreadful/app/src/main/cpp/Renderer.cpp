@@ -102,9 +102,33 @@ Renderer::~Renderer() {
   }
 }
 
-void Renderer::render() {
-  // clear the color buffer
-  glClear(GL_COLOR_BUFFER_BIT);
+void Renderer::render(uint32_t imageIndex) {
+  // Make sure we have a valid context
+  if (context_ == EGL_NO_CONTEXT || display_ == EGL_NO_DISPLAY || surface_ == EGL_NO_SURFACE) {
+    aout << "Renderer::render() called without a valid EGL context, display, or surface" << endl;
+    return;
+  }
+
+  if (imageIndex >= colorImages_.size()) {
+    aout << "Invalid image index: " << imageIndex << endl;
+    return;
+  }
+
+  // Configure the fbo
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorImages_[imageIndex].textureId, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthImages_[imageIndex].textureId, 0);
+  // Check FBO completeness
+  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE) {
+    aout << "Framebuffer not complete: 0x" << std::hex << status << std::dec << endl;
+    return;
+  }
+
+  glViewport(0, 0, colorImages_[imageIndex].width, colorImages_[imageIndex].height);
+
+  // clear the color and depth buffers
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Render all the models. There's no depth testing in this sample so they're accepted in the
   // order provided. But the sample EGL setup requests a 24 bit depth buffer so you could
@@ -114,6 +138,9 @@ void Renderer::render() {
       shader_->drawModel(model);
     }
   }
+
+  // Unbind the fbo
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::initRenderer() {
@@ -224,6 +251,9 @@ void Renderer::initRenderer() {
   PRINT_GL_STRING(GL_VERSION);
   PRINT_GL_STRING_AS_LIST(GL_EXTENSIONS);
 
+  // Create a framebuffer object to render to
+  glGenFramebuffers(1, &fbo);
+
   shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
 
   // Note: there's only one shader in this demo, so I'll activate it here. For a more complex game
@@ -274,9 +304,20 @@ void Renderer::createModels() {
 
 void Renderer::setSwapchainImages(uint32_t width, uint32_t height, const std::span<GLuint>& images) {
   // Populate the swapchainImages vector with the provided images
-  swapchainImages_.reserve(images.size());
+  colorImages_.reserve(images.size());
+  depthImages_.reserve(images.size());
   for (auto& image : images) {
-    swapchainImages_.push_back({image, width, height});
+    colorImages_.push_back({image, width, height});
+    // Create a depth texture for each swapchain image
+    GLuint depthTex = 0;
+    glGenTextures(1, &depthTex);
+    glBindTexture(GL_TEXTURE_2D, depthTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    depthImages_.push_back({depthTex, width, height});
   }
 }
 

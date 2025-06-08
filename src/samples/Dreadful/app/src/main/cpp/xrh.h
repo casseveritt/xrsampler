@@ -21,6 +21,8 @@
 #include <set>
 #include <span>
 #include <vector>
+
+#include "xrhlinear.h"
 namespace xrh {
 
 class InstanceOb;
@@ -45,6 +47,50 @@ bool init_loader(JavaVM* vm, jobject ctx);
 constexpr XrVector3f ZeroVec3{0, 0, 0};
 constexpr XrQuaternionf IdentityQuat{0, 0, 0, 1};
 constexpr XrPosef IdentityPose{IdentityQuat, ZeroVec3};
+
+// Layer types
+class Layer {
+ public:
+  enum class Type { Projection = 0, Quad = 1, Cylinder = 2, Equirect = 3, Cube = 4 };
+  Layer(Type type_) : type(type_) {}
+  virtual ~Layer() = default;
+
+  void set_swapchain(Swapchain sc, int index = 0) {
+    if (index < 0 || index >= swapchains.size()) {
+      // aout << __FUNCTION__ << " Invalid swapchain index: " << index << std::endl;
+      return;
+    }
+    swapchains[index] = sc;
+  }
+
+  void set_space(Space space_) {
+    space = space_;
+  }
+
+  void set_pose(const Posef& p) {
+    pose = p;
+  }
+
+  Type type;
+  std::array<Swapchain, 2> swapchains;
+  Space space;
+  Posef pose{IdentityPose};
+};
+
+class QuadLayer : public Layer {
+ public:
+  QuadLayer() : Layer(Type::Quad) {}
+
+  void set_size(float widthMeters, float heightMeters) {
+    width = widthMeters;
+    height = heightMeters;
+  }
+
+  XrCompositionLayerQuad get_xr_quad_layer() const;
+
+  float width{};
+  float height{};
+};
 
 class InstanceOb {
  public:
@@ -127,6 +173,7 @@ class SessionOb {
   Swapchain create_swapchain(const XrSwapchainCreateInfo& createInfo);
 
   bool begin_frame();
+  void add_layer(const Layer& layer);
   void end_frame();
 
  private:
@@ -135,6 +182,18 @@ class SessionOb {
   XrFrameState fs;
   XrSessionState state;
   std::set<XrReferenceSpaceType> refspacetypes;
+
+  struct StereoProjectionLayer {
+    XrCompositionLayerProjection proj;
+    std::array<XrCompositionLayerProjectionView, 2> views;
+  };
+  union LayerUnion {
+    XrCompositionLayerBaseHeader base;
+    StereoProjectionLayer stereo;
+    XrCompositionLayerQuad quad;
+  };
+
+  std::vector<LayerUnion> layers;
 };
 
 class SpaceOb {
@@ -202,6 +261,10 @@ class SwapchainOb {
     return {CIST, nullptr, 0, UsageSampled | UsageColorAttachment, format, 1, width, height, 1, 1, 1};
   }
 
+  XrSwapchain get_xr_swapchain() const {
+    return swapchain;
+  }
+
   uint32_t get_width() const {
     return ci.width;
   }
@@ -210,11 +273,39 @@ class SwapchainOb {
     return ci.height;
   }
 
+  XrExtent2Di get_extent() const {
+    return {static_cast<int>(ci.width), static_cast<int>(ci.height)};
+  }
+
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
   const std::span<GLuint> enumerate_images() {
     return images;
   }
 #endif
+
+  uint32_t acquire_image() {
+    XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+    uint32_t imageIndex = 0;
+    xrAcquireSwapchainImage(swapchain, &acquireInfo, &imageIndex);
+    return imageIndex;
+  }
+
+  void wait_image() {
+    XrSwapchainImageWaitInfo waitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+    waitInfo.timeout = XR_INFINITE_DURATION;
+    xrWaitSwapchainImage(swapchain, &waitInfo);
+  }
+
+  uint32_t acquire_and_wait_image() {
+    uint32_t imageIndex = acquire_image();
+    wait_image();
+    return imageIndex;
+  }
+
+  void release_image() {
+    XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+    xrReleaseSwapchainImage(swapchain, &releaseInfo);
+  }
 
  private:
   Session ssn;

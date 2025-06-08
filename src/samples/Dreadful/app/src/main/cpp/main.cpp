@@ -102,6 +102,10 @@ struct Xr {
     return ssn->begin_frame();
   }
 
+  void add_layer(const Layer& layer) {
+    ssn->add_layer(layer);
+  }
+
   void end_frame() {
     ssn->end_frame();
   }
@@ -148,6 +152,9 @@ void android_main(struct android_app* pApp) {
       // user data remember to change it here
       auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
 
+      // Process game input
+      pRenderer->handleInput();
+
       if (!xr.is_initialized()) {
         xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
         // I need to get the swapchain, enumerate the images, and pass the corresponding
@@ -163,11 +170,21 @@ void android_main(struct android_app* pApp) {
         continue;
       }
 
-      // Process game input
-      pRenderer->handleInput();
+      // Acquire the next image index for the swapchain
+      uint32_t imageIndex = xr.sc->acquire_and_wait_image();
 
       // Render a frame
-      pRenderer->render();
+      pRenderer->render(imageIndex);
+
+      xr.sc->release_image();
+
+      // add a layer to be submitted at the end of the frame
+      xrh::QuadLayer quad;
+      quad.set_pose(Posef(Quatf::Identity(), Vector3f(0, 0, -1)));
+      quad.set_size(2.0f, 2.0f);  // Set the size of the quad layer
+      quad.set_swapchain(xr.sc);
+      quad.set_space(xr.local);
+      xr.add_layer(quad);
     }
   } while (!pApp->destroyRequested);
 }

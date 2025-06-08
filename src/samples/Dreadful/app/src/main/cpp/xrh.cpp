@@ -358,6 +358,20 @@ bool SessionOb::begin_frame() {
   return true;
 }
 
+void SessionOb::add_layer(const Layer& layer) {
+  LayerUnion lu;
+  switch (layer.type) {
+    case Layer::Type::Quad: {
+      auto quadLayer = reinterpret_cast<const QuadLayer*>(&layer);
+      lu.quad = quadLayer->get_xr_quad_layer();
+      layers.push_back(lu);
+    } break;
+    default:
+      aout << "Unsupported layer type." << endl;
+      return;
+  }
+}
+
 void SessionOb::end_frame() {
   XrFrameEndInfo fei{XR_TYPE_FRAME_END_INFO};
   fei.displayTime = fs.predictedDisplayTime;
@@ -396,6 +410,17 @@ SwapchainOb::SwapchainOb(Session ssn_, XrSwapchain swapchain_, const XrSwapchain
 
 SwapchainOb::~SwapchainOb() {
   XRH(xrDestroySwapchain(swapchain));
+}
+
+XrCompositionLayerQuad QuadLayer::get_xr_quad_layer() const {
+  XrCompositionLayerQuad layer{XR_TYPE_COMPOSITION_LAYER_QUAD};
+  layer.space = space->get_xr_space();
+  layer.pose = pose;
+  layer.size = {width, height};
+  layer.subImage.swapchain = swapchains[0]->get_xr_swapchain();
+  layer.subImage.imageRect.offset = {0, 0};
+  layer.subImage.imageRect.extent = swapchains[0]->get_extent();
+  return layer;
 }
 
 }  // namespace xrh
