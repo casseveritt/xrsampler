@@ -29,6 +29,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       // "game" class if that suits your needs. Remember to change all instances of userData
       // if you change the class here as a reinterpret_cast is dangerous this in the
       // android_main function and the APP_CMD_TERM_WINDOW handler case.
+      aout << "APP_CMD_INIT_WINDOW" << endl;
       pApp->userData = new Renderer(pApp);
       break;
     case APP_CMD_TERM_WINDOW:
@@ -36,6 +37,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       // resources.
       //
       // We have to check if userData is assigned just in case this comes in really quickly
+      aout << "APP_CMD_TERM_WINDOW" << endl;
       if (pApp->userData) {
         //
         auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
@@ -44,6 +46,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       }
       break;
     default:
+      aout << "Unhandled command: " << cmd << endl;
       break;
   }
 }
@@ -94,12 +97,24 @@ struct Xr {
     return true;
   }
 
+  Session get_session() const {
+    return ssn;
+  }
+
+  Space get_local() const {
+    return local;
+  }
+
   bool is_initialized() const {
     return bool(inst);
   }
 
   bool begin_frame() {
     return ssn->begin_frame();
+  }
+
+  Swapchain get_swapchain() const {
+    return sc;
   }
 
   void add_layer(const Layer& layer) {
@@ -110,6 +125,7 @@ struct Xr {
     ssn->end_frame();
   }
 
+ private:
   Instance inst;
   Session ssn;
   Space local;
@@ -138,6 +154,7 @@ void android_main(struct android_app* pApp) {
   // This sets up a typical game/event loop. It will run until the app is destroyed.
   int events;
   android_poll_source* pSource;
+  bool rendererNeedsSwapchain = true;
   do {
     // Process all pending events before running game logic.
     if (ALooper_pollAll(0, nullptr, &events, (void**)&pSource) >= 0) {
@@ -147,54 +164,65 @@ void android_main(struct android_app* pApp) {
     }
 
     // Check if any user data is associated. This is assigned in handle_cmd
-    if (pApp->userData) {
-      // We know that our user data is a Renderer, so reinterpret cast it. If you change your
-      // user data remember to change it here
-      auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
+    if (!pApp->userData) {
+      rendererNeedsSwapchain = true;
+      continue;
+    }
+    // We know that our user data is a Renderer, so reinterpret cast it. If you change your
+    // user data remember to change it here
+    auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
 
-      // Process game input
-      pRenderer->handleInput();
+    // Process game input
+    pRenderer->handleInput();
 
-      if (!xr.is_initialized()) {
-        xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
-        // I need to get the swapchain, enumerate the images, and pass the corresponding
-        // texture objects to the renderer.
+    if (!xr.is_initialized()) {
+      xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
+      // I need to get the swapchain, enumerate the images, and pass the corresponding
+      // texture objects to the renderer.
+    }
 
-        // Assuming Swapchain has a method enumerate_images() returning std::vector<GLuint>
-        const std::span<GLuint> textures = xr.sc->enumerate_images();
-        pRenderer->setSwapchainImages(xr.sc->get_width(), xr.sc->get_height(), textures);
+    // Assuming Swapchain has a method enumerate_images() returning std::vector<GLuint>
+    if (rendererNeedsSwapchain) {
+      Swapchain sc = xr.get_swapchain();
+      if (sc) {
+        const std::span<GLuint> textures = sc->enumerate_images();
+        pRenderer->setSwapchainImages(sc->get_width(), sc->get_height(), textures);
       }
+      rendererNeedsSwapchain = false;
+    }
 
-      if (!xr.begin_frame()) {
-        // We can't begin a frame until the session is in a valid state.
-        static int frameCount = 0;
-        frameCount++;
-        if (frameCount % 60 == 0) {
-          aout << "Waiting for session to become synchronized, frame count: " << frameCount << endl;
-        }
-        continue;
+    if (!xr.begin_frame()) {
+      // We can't begin a frame until the session is in a valid state.
+      static int frameCount = 0;
+      frameCount++;
+      if (frameCount % 60 == 0) {
+        aout << "Waiting for session to become synchronized, frame count: " << frameCount << endl;
       }
+      continue;
+    }
 
-      // Acquire the next image index for the swapchain
-      uint32_t imageIndex = xr.sc->acquire_and_wait_image();
+    // Acquire the next image index for the swapchain
+    Swapchain sc = xr.get_swapchain();
+    if (sc) {
+      uint32_t imageIndex = sc->acquire_and_wait_image();
 
       // Render a frame
       pRenderer->render(imageIndex);
 
-      xr.sc->release_image();
-
       // add a layer to be submitted at the end of the frame
       xrh::QuadLayer quad;
-      double t = xr.ssn->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
+      double t = xr.get_session()->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
 
       quad.set_pose(Posef(Quatf(Vector3f(0, 0, 1), t), Vector3f(0, 0, -1)));
       quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
-      quad.set_swapchain(xr.sc);
-      quad.set_space(xr.local);
+      quad.set_swapchain(sc);
+      quad.set_space(xr.get_local());
       xr.add_layer(quad);
 
-      xr.end_frame();
+      sc->release_image();
     }
+
+    xr.end_frame();
   } while (!pApp->destroyRequested);
 }
 }

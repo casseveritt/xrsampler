@@ -110,7 +110,7 @@ void Renderer::render(uint32_t imageIndex) {
   }
 
   if (imageIndex >= colorImages_.size()) {
-    aout << "Invalid image index: " << imageIndex << endl;
+    aout << "Invalid image index: " << imageIndex << ", numImages: " << colorImages_.size() << endl;
     return;
   }
 
