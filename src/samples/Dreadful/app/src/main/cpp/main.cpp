@@ -13,8 +13,93 @@
 using namespace std;
 using namespace xrh;
 
-extern "C" {
+namespace {
+struct Xr {
+  using RendererPtr = std::shared_ptr<Renderer>;
 
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+  Xr(android_app* pApp)
+#else
+  Xr()
+#endif
+  {
+#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
+    renderer = make_shared<Renderer>(pApp);
+    auto dpy = renderer->getDisplay();
+    auto cfg = renderer->getConfig();
+    auto ctx = renderer->getContext();
+    // instance
+    inst = make_instance();
+    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+    if (!inst->create()) {
+      aout << "OpenXR instance creation failed, exiting." << endl;
+      return;
+    }
+    inst->set_gfx_binding(dpy, cfg, ctx);
+#else
+    // instance
+    inst = make_instance();
+    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+    if (!inst->create()) {
+      aout << "OpenXR instance creation failed, exiting." << endl;
+    }
+#endif
+    // session
+    ssn = inst->create_session();
+
+    // local space
+    auto rsci = RefSpace::element_type::make_create_info();
+    local = ssn->create_refspace(rsci);
+
+    auto vcv = inst->get_xr_view_config_view(0);
+    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
+    sc = ssn->create_swapchain(scci);
+
+    renderer->setSwapchainImages(sc->get_width(), sc->get_height(), sc->enumerate_images());
+  }
+
+  RendererPtr get_renderer() {
+    return renderer;
+  }
+
+  Session get_session() const {
+    return ssn;
+  }
+
+  Space get_local() const {
+    return local;
+  }
+
+  bool is_initialized() const {
+    return bool(inst);
+  }
+
+  bool begin_frame() {
+    return ssn->begin_frame();
+  }
+  Swapchain get_swapchain() const {
+    return sc;
+  }
+
+  void add_layer(const Layer& layer) {
+    ssn->add_layer(layer);
+  }
+
+  void end_frame() {
+    ssn->end_frame();
+  }
+
+ private:
+  Instance inst;
+  Session ssn;
+  Space local;
+  Swapchain sc;
+  RendererPtr renderer;
+};
+
+}  // namespace
+
+extern "C" {
 #include <game-activity/native_app_glue/android_native_app_glue.c>
 
 /*!
@@ -30,7 +115,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       // if you change the class here as a reinterpret_cast is dangerous this in the
       // android_main function and the APP_CMD_TERM_WINDOW handler case.
       aout << "APP_CMD_INIT_WINDOW" << endl;
-      pApp->userData = new Renderer(pApp);
+      pApp->userData = new Xr(pApp);
       break;
     case APP_CMD_TERM_WINDOW:
       // The window is being destroyed. Use this to clean up your userData to avoid leaking
@@ -40,9 +125,9 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       aout << "APP_CMD_TERM_WINDOW" << endl;
       if (pApp->userData) {
         //
-        auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
+        auto* pxr = reinterpret_cast<Xr*>(pApp->userData);
         pApp->userData = nullptr;
-        delete pRenderer;
+        delete pxr;
       }
       break;
     default:
@@ -65,80 +150,6 @@ bool motion_event_filter_func(const GameActivityMotionEvent* motionEvent) {
   return (sourceClass == AINPUT_SOURCE_CLASS_POINTER || sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK);
 }
 
-namespace {
-struct Xr {
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-  bool init(EGLDisplay dpy, EGLConfig cfg, EGLContext ctx)
-#else
-  bool init()
-#endif
-  {
-    // instance
-    inst = make_instance();
-    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
-    if (!inst->create()) {
-      aout << "OpenXR instance creation failed, exiting." << endl;
-      return false;
-    }
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    inst->set_gfx_binding(dpy, cfg, ctx);
-#endif
-    // session
-    ssn = inst->create_session();
-
-    // local space
-    auto rsci = RefSpace::element_type::make_create_info();
-    local = ssn->create_refspace(rsci);
-    return true;
-  }
-
-  Session get_session() const {
-    return ssn;
-  }
-
-  Space get_local() const {
-    return local;
-  }
-
-  bool is_initialized() const {
-    return bool(inst);
-  }
-
-  bool begin_frame() {
-    return ssn->begin_frame();
-  }
-
-  void create_swapchain() {
-    auto vcv = inst->get_xr_view_config_view(0);
-    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
-    sc = ssn->create_swapchain(scci);
-  }
-
-  void destroy_swapchain() {
-    sc.reset();
-  }
-
-  Swapchain get_swapchain() const {
-    return sc;
-  }
-
-  void add_layer(const Layer& layer) {
-    ssn->add_layer(layer);
-  }
-
-  void end_frame() {
-    ssn->end_frame();
-  }
-
- private:
-  Instance inst;
-  Session ssn;
-  Space local;
-  Swapchain sc;
-};
-
-}  // namespace
-
 /*!
  * This the main entry point for a native activity
  */
@@ -154,8 +165,6 @@ void android_main(struct android_app* pApp) {
     return;
   }
 
-  Xr xr;
-
   // This sets up a typical game/event loop. It will run until the app is destroyed.
   int events;
   android_poll_source* pSource;
@@ -169,33 +178,14 @@ void android_main(struct android_app* pApp) {
 
     // Check if any user data is associated. This is assigned in handle_cmd
     if (!pApp->userData) {
-      if (xr.get_swapchain()) {
-        xr.destroy_swapchain();
-      }
       continue;
     }
     // We know that our user data is a Renderer, so reinterpret cast it. If you change your
     // user data remember to change it here
-    auto* pRenderer = reinterpret_cast<Renderer*>(pApp->userData);
+    auto& xr = *reinterpret_cast<Xr*>(pApp->userData);
 
     // Process game input
-    pRenderer->handleInput();
-
-    if (!xr.is_initialized()) {
-      xr.init(pRenderer->getDisplay(), pRenderer->getConfig(), pRenderer->getContext());
-      // I need to get the swapchain, enumerate the images, and pass the corresponding
-      // texture objects to the renderer.
-    }
-
-    // Assuming Swapchain has a method enumerate_images() returning std::vector<GLuint>
-    if (Swapchain sc = xr.get_swapchain(); !sc) {
-      xr.create_swapchain();
-      sc = xr.get_swapchain();
-      if (sc) {
-        const std::span<GLuint> textures = sc->enumerate_images();
-        pRenderer->setSwapchainImages(sc->get_width(), sc->get_height(), textures);
-      }
-    }
+    xr.get_renderer()->handleInput();
 
     if (!xr.begin_frame()) {
       // We can't begin a frame until the session is in a valid state.
@@ -213,7 +203,7 @@ void android_main(struct android_app* pApp) {
       uint32_t imageIndex = sc->acquire_and_wait_image();
 
       // Render a frame
-      pRenderer->render(imageIndex);
+      xr.get_renderer()->render(imageIndex);
 
       // add a layer to be submitted at the end of the frame
       xrh::QuadLayer quad;
