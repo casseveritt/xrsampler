@@ -127,6 +127,14 @@ void Renderer::render(uint32_t imageIndex) {
 
   glViewport(0, 0, colorImages_[imageIndex].width, colorImages_[imageIndex].height);
 
+  static int frameCount = 0;
+  frameCount++;
+  {
+    float t = frameCount / 60.f;
+    glClearColor(sin(1.7212 * t + 1.813) * 0.5f + 0.5f, sin(0.6212 * t + 2.13) * 0.5f + 0.5f,
+                 sin(0.7612 * t + .213) * 0.5f + 0.5f, 0.5f);
+  }
+
   // clear the color and depth buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
