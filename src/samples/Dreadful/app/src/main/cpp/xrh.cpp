@@ -179,6 +179,11 @@ bool InstanceOb::create() {
   }
 
   XrInstanceCreateInfo ci{XR_TYPE_INSTANCE_CREATE_INFO};
+  strncpy(ci.applicationInfo.applicationName, "xrh", XR_MAX_APPLICATION_NAME_SIZE);
+  ci.applicationInfo.applicationVersion = 1;
+  strncpy(ci.applicationInfo.engineName, "xrh", XR_MAX_ENGINE_NAME_SIZE);
+  ci.applicationInfo.engineVersion = 1;
+  ci.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
   ci.enabledExtensionCount = extNames.size();
   ci.enabledExtensionNames = extNames.data();
   inst = XR_NULL_HANDLE;
@@ -315,33 +320,38 @@ Swapchain SessionOb::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
 }
 
 bool SessionOb::begin_frame() {
+  // Handle OpenXR events...
   XrEventDataBuffer edb{XR_TYPE_EVENT_DATA_BUFFER};
-  XRH(xrPollEvent(inst->get_xr_instance(), &edb));
-  switch (edb.type) {
-    case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
-      auto& ssc = *reinterpret_cast<XrEventDataSessionStateChanged*>(&edb);
-      state = ssc.state;
-      aout << "Session state changed: " << ToString(state) << endl;
-      switch (state) {
-        case XR_SESSION_STATE_READY: {
-          XrSessionBeginInfo sbi{XR_TYPE_SESSION_BEGIN_INFO};
-          sbi.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-          XRH(xrBeginSession(ssn, &sbi));
-        } break;
-        case XR_SESSION_STATE_STOPPING:
-          XRH(xrEndSession(ssn));
-          break;
-        default:
-          break;
-      }
-    } break;
-    default:
-      break;
+  XrResult res = XRH(xrPollEvent(inst->get_xr_instance(), &edb));
+  while (res == XR_SUCCESS) {
+    switch (edb.type) {
+      case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
+        auto& ssc = *reinterpret_cast<XrEventDataSessionStateChanged*>(&edb);
+        state = ssc.state;
+        aout << "Session state changed: " << ToString(state) << endl;
+        switch (state) {
+          case XR_SESSION_STATE_READY: {
+            XrSessionBeginInfo sbi{XR_TYPE_SESSION_BEGIN_INFO};
+            sbi.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+            XRH(xrBeginSession(ssn, &sbi));
+          } break;
+          case XR_SESSION_STATE_STOPPING:
+            XRH(xrEndSession(ssn));
+            break;
+          default:
+            break;
+        }
+      } break;
+      default:
+        break;
+    }
+    res = XRH(xrPollEvent(inst->get_xr_instance(), &edb));
   }
 
   switch (state) {
-    case XR_SESSION_STATE_VISIBLE:
+    case XR_SESSION_STATE_READY:
     case XR_SESSION_STATE_SYNCHRONIZED:
+    case XR_SESSION_STATE_VISIBLE:
     case XR_SESSION_STATE_FOCUSED:
       break;
     default:
@@ -365,9 +375,9 @@ void SessionOb::add_layer(const Layer& layer) {
       auto quadLayer = reinterpret_cast<const QuadLayer*>(&layer);
       lu.quad = quadLayer->get_xr_quad_layer();
       layers.push_back(lu);
+      layer_ptrs.push_back(&layers.back().base);
     } break;
     default:
-      aout << "Unsupported layer type." << endl;
       return;
   }
 }
@@ -376,9 +386,14 @@ void SessionOb::end_frame() {
   XrFrameEndInfo fei{XR_TYPE_FRAME_END_INFO};
   fei.displayTime = fs.predictedDisplayTime;
   fei.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
-  fei.layerCount = 0;
-  fei.layers = nullptr;
+  fei.layerCount = static_cast<uint32_t>(layer_ptrs.size());
+  for (size_t i = 0; i < layer_ptrs.size(); ++i) {
+    aout << "Layer " << i << ": " << layer_ptrs[i]->type << endl;
+  }
+  fei.layers = layer_ptrs.data();
   XRH(xrEndFrame(ssn, &fei));
+  layers.clear();
+  layer_ptrs.clear();
 }
 
 SpaceOb::SpaceOb(Session ssn_, XrSpace space_, SpaceOb::Type type_) : ssn(ssn_), space(space_), type(type_) {}

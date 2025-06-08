@@ -167,6 +167,11 @@ void android_main(struct android_app* pApp) {
 
       if (!xr.begin_frame()) {
         // We can't begin a frame until the session is in a valid state.
+        static int frameCount = 0;
+        frameCount++;
+        if (frameCount % 60 == 0) {
+          aout << "Waiting for session to become synchronized, frame count: " << frameCount << endl;
+        }
         continue;
       }
 
@@ -181,10 +186,12 @@ void android_main(struct android_app* pApp) {
       // add a layer to be submitted at the end of the frame
       xrh::QuadLayer quad;
       quad.set_pose(Posef(Quatf::Identity(), Vector3f(0, 0, -1)));
-      quad.set_size(2.0f, 2.0f);  // Set the size of the quad layer
+      quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
       quad.set_swapchain(xr.sc);
       quad.set_space(xr.local);
       xr.add_layer(quad);
+
+      xr.end_frame();
     }
   } while (!pApp->destroyRequested);
 }

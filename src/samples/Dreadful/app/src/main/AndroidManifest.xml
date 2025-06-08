@@ -10,6 +10,8 @@
     <uses-feature
         android:name="android.hardware.vr.headtracking"
         android:required="true" />
+    <uses-feature android:name="com.oculus.feature.PASSTHROUGH"
+        android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -26,8 +28,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="com.oculus.intent.category.VR" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="org.khronos.openxr.intent.category.IMMERSIVE_HMD" />
             </intent-filter>
 
             <meta-data

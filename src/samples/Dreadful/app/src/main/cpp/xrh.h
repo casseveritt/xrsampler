@@ -194,6 +194,7 @@ class SessionOb {
   };
 
   std::vector<LayerUnion> layers;
+  std::vector<XrCompositionLayerBaseHeader*> layer_ptrs;
 };
 
 class SpaceOb {
