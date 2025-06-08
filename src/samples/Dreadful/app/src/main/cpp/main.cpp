@@ -89,11 +89,6 @@ struct Xr {
     // local space
     auto rsci = RefSpace::element_type::make_create_info();
     local = ssn->create_refspace(rsci);
-
-    // swapchain
-    auto vcv = inst->get_xr_view_config_view(0);
-    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
-    sc = ssn->create_swapchain(scci);
     return true;
   }
 
@@ -111,6 +106,16 @@ struct Xr {
 
   bool begin_frame() {
     return ssn->begin_frame();
+  }
+
+  void create_swapchain() {
+    auto vcv = inst->get_xr_view_config_view(0);
+    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
+    sc = ssn->create_swapchain(scci);
+  }
+
+  void destroy_swapchain() {
+    sc.reset();
   }
 
   Swapchain get_swapchain() const {
@@ -154,7 +159,6 @@ void android_main(struct android_app* pApp) {
   // This sets up a typical game/event loop. It will run until the app is destroyed.
   int events;
   android_poll_source* pSource;
-  bool rendererNeedsSwapchain = true;
   do {
     // Process all pending events before running game logic.
     if (ALooper_pollAll(0, nullptr, &events, (void**)&pSource) >= 0) {
@@ -165,7 +169,9 @@ void android_main(struct android_app* pApp) {
 
     // Check if any user data is associated. This is assigned in handle_cmd
     if (!pApp->userData) {
-      rendererNeedsSwapchain = true;
+      if (xr.get_swapchain()) {
+        xr.destroy_swapchain();
+      }
       continue;
     }
     // We know that our user data is a Renderer, so reinterpret cast it. If you change your
@@ -182,13 +188,13 @@ void android_main(struct android_app* pApp) {
     }
 
     // Assuming Swapchain has a method enumerate_images() returning std::vector<GLuint>
-    if (rendererNeedsSwapchain) {
-      Swapchain sc = xr.get_swapchain();
+    if (Swapchain sc = xr.get_swapchain(); !sc) {
+      xr.create_swapchain();
+      sc = xr.get_swapchain();
       if (sc) {
         const std::span<GLuint> textures = sc->enumerate_images();
         pRenderer->setSwapchainImages(sc->get_width(), sc->get_height(), textures);
       }
-      rendererNeedsSwapchain = false;
     }
 
     if (!xr.begin_frame()) {
