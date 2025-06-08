@@ -58,6 +58,10 @@ struct Xr {
     renderer->setSwapchainImages(sc->get_width(), sc->get_height(), sc->enumerate_images());
   }
 
+  ~Xr() {
+    aout << "Destroying Xr instance." << inst.get() << endl;
+  }
+
   RendererPtr get_renderer() {
     return renderer;
   }
@@ -126,6 +130,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       if (pApp->userData) {
         //
         auto* pxr = reinterpret_cast<Xr*>(pApp->userData);
+
         pApp->userData = nullptr;
         delete pxr;
       }

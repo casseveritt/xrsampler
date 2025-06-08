@@ -53,7 +53,7 @@ class Layer {
  public:
   enum class Type { Projection = 0, Quad = 1, Cylinder = 2, Equirect = 3, Cube = 4 };
   Layer(Type type_) : type(type_) {}
-  virtual ~Layer() = default;
+  virtual ~Layer();
 
   void set_swapchain(Swapchain sc, int index = 0) {
     if (index < 0 || index >= swapchains.size()) {
@@ -72,8 +72,8 @@ class Layer {
   }
 
   Type type;
-  std::array<Swapchain, 2> swapchains;
   Space space;
+  std::array<Swapchain, 2> swapchains;
   Posef pose{IdentityPose};
 };
 
@@ -92,7 +92,7 @@ class QuadLayer : public Layer {
   float height{};
 };
 
-class InstanceOb {
+class InstanceOb : public std::enable_shared_from_this<InstanceOb> {
  public:
   InstanceOb();
   ~InstanceOb();
@@ -160,7 +160,7 @@ class InstanceOb {
   std::array<XrViewConfigurationView, 2> view_config_views;
 };
 
-class SessionOb {
+class SessionOb : public std::enable_shared_from_this<SessionOb> {
  public:
   SessionOb(Instance inst_, XrSession ssn_);
   ~SessionOb();

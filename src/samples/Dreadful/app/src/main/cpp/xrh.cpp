@@ -140,6 +140,7 @@ Instance make_instance() {
 InstanceOb::InstanceOb() {}
 
 InstanceOb::~InstanceOb() {
+  aout << "Destroying InstanceOb: " << inst << endl;
   destroy();
 }
 
@@ -251,8 +252,8 @@ void InstanceOb::destroy() {
   if (inst == XR_NULL_HANDLE) {
     return;
   }
-  inst = XR_NULL_HANDLE;
   XRH(xrDestroyInstance(inst));
+  inst = XR_NULL_HANDLE;
 }
 
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
@@ -277,7 +278,7 @@ Session InstanceOb::create_session() {
     aout << "XrSession creation failed." << endl;
     return nullptr;
   }
-  return std::make_shared<SessionOb>(Instance(this), sess);
+  return std::make_shared<SessionOb>(shared_from_this(), sess);
 }
 
 SessionOb::SessionOb(Instance inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
@@ -292,6 +293,7 @@ SessionOb::SessionOb(Instance inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
 }
 
 SessionOb::~SessionOb() {
+  aout << "Destroying SessionOb: " << ssn << endl;
   XRH(xrDestroySession(ssn));
 }
 
@@ -307,7 +309,7 @@ Space SessionOb::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
     aout << "Reference space creation failed." << endl;
     return nullptr;
   }
-  return make_shared<RefSpace::element_type>(Session(this), spacehandle, createInfo);
+  return make_shared<RefSpace::element_type>(shared_from_this(), spacehandle, createInfo);
 }
 
 Swapchain SessionOb::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
@@ -316,7 +318,7 @@ Swapchain SessionOb::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
   if (res != XR_SUCCESS) {
     aout << "Swapchain creation failed." << endl;
   }
-  return make_shared<Swapchain::element_type>(Session(this), sc, createInfo);
+  return make_shared<Swapchain::element_type>(shared_from_this(), sc, createInfo);
 }
 
 bool SessionOb::begin_frame() {
@@ -396,6 +398,7 @@ void SessionOb::end_frame() {
 SpaceOb::SpaceOb(Session ssn_, XrSpace space_, SpaceOb::Type type_) : ssn(ssn_), space(space_), type(type_) {}
 
 SpaceOb::~SpaceOb() {
+  aout << "Destroying SpaceOb: " << space << endl;
   XRH(xrDestroySpace(space));
 }
 
@@ -421,6 +424,7 @@ SwapchainOb::SwapchainOb(Session ssn_, XrSwapchain swapchain_, const XrSwapchain
 }
 
 SwapchainOb::~SwapchainOb() {
+  aout << "Destroying SwapchainOb: " << swapchain << endl;
   XRH(xrDestroySwapchain(swapchain));
 }
 
@@ -433,6 +437,10 @@ XrCompositionLayerQuad QuadLayer::get_xr_quad_layer() const {
   layer.subImage.imageRect.offset = {0, 0};
   layer.subImage.imageRect.extent = swapchains[0]->get_extent();
   return layer;
+}
+
+Layer::~Layer() {
+  // aout << "Destroying Layer: " << this << endl;
 }
 
 }  // namespace xrh
