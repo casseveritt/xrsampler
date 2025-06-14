@@ -7,101 +7,12 @@
 
 #include "AndroidOut.h"
 #include "Renderer.h"
+#include "xrapp.h"
 #include "xrh.h"
 #include "xrhlinear.h"
 
 using namespace std;
 using namespace xrh;
-
-namespace {
-struct Xr {
-  using RendererPtr = std::shared_ptr<Renderer>;
-
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-  Xr(android_app* pApp)
-#else
-  Xr()
-#endif
-  {
-#if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-    renderer = make_shared<Renderer>(pApp);
-    auto dpy = renderer->getDisplay();
-    auto cfg = renderer->getConfig();
-    auto ctx = renderer->getContext();
-    // instance
-    inst = make_instance();
-    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
-    if (!inst->create()) {
-      aout << "OpenXR instance creation failed, exiting." << endl;
-      return;
-    }
-    inst->set_gfx_binding(dpy, cfg, ctx);
-#else
-    // instance
-    inst = make_instance();
-    inst->add_required_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
-    if (!inst->create()) {
-      aout << "OpenXR instance creation failed, exiting." << endl;
-    }
-#endif
-    // session
-    ssn = inst->create_session();
-
-    // local space
-    auto rsci = RefSpace::element_type::make_create_info();
-    local = ssn->create_refspace(rsci);
-
-    auto vcv = inst->get_xr_view_config_view(0);
-    auto scci = Swapchain::element_type::make_create_info(vcv.recommendedImageRectWidth, vcv.recommendedImageRectHeight);
-    sc = ssn->create_swapchain(scci);
-
-    renderer->setSwapchainImages(sc->get_width(), sc->get_height(), sc->enumerate_images());
-  }
-
-  ~Xr() {
-    aout << "Destroying Xr instance." << inst.get() << endl;
-  }
-
-  RendererPtr get_renderer() {
-    return renderer;
-  }
-
-  Session get_session() const {
-    return ssn;
-  }
-
-  Space get_local() const {
-    return local;
-  }
-
-  bool is_initialized() const {
-    return bool(inst);
-  }
-
-  bool begin_frame() {
-    return ssn->begin_frame();
-  }
-  Swapchain get_swapchain() const {
-    return sc;
-  }
-
-  void add_layer(const Layer& layer) {
-    ssn->add_layer(layer);
-  }
-
-  void end_frame() {
-    ssn->end_frame();
-  }
-
- private:
-  Instance inst;
-  Session ssn;
-  Space local;
-  Swapchain sc;
-  RendererPtr renderer;
-};
-
-}  // namespace
 
 extern "C" {
 #include <game-activity/native_app_glue/android_native_app_glue.c>
@@ -119,7 +30,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       // if you change the class here as a reinterpret_cast is dangerous this in the
       // android_main function and the APP_CMD_TERM_WINDOW handler case.
       aout << "APP_CMD_INIT_WINDOW" << endl;
-      pApp->userData = new Xr(pApp);
+      pApp->userData = new xr::App(pApp);
       break;
     case APP_CMD_TERM_WINDOW:
       // The window is being destroyed. Use this to clean up your userData to avoid leaking
@@ -129,7 +40,7 @@ void handle_cmd(android_app* pApp, int32_t cmd) {
       aout << "APP_CMD_TERM_WINDOW" << endl;
       if (pApp->userData) {
         //
-        auto* pxr = reinterpret_cast<Xr*>(pApp->userData);
+        auto* pxr = reinterpret_cast<xr::App*>(pApp->userData);
 
         pApp->userData = nullptr;
         delete pxr;
@@ -159,9 +70,6 @@ bool motion_event_filter_func(const GameActivityMotionEvent* motionEvent) {
  * This the main entry point for a native activity
  */
 void android_main(struct android_app* pApp) {
-  // Can be removed, useful to ensure your code is running
-  aout << "Welcome to android_main" << endl;
-
   // Register an event handler for Android events
   pApp->onAppCmd = handle_cmd;
 
@@ -187,7 +95,7 @@ void android_main(struct android_app* pApp) {
     }
     // We know that our user data is a Renderer, so reinterpret cast it. If you change your
     // user data remember to change it here
-    auto& xr = *reinterpret_cast<Xr*>(pApp->userData);
+    auto& xr = *reinterpret_cast<xr::App*>(pApp->userData);
 
     // Process game input
     xr.get_renderer()->handleInput();
