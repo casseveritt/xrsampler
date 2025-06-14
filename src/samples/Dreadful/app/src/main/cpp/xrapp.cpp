@@ -83,4 +83,43 @@ void App::end_frame() {
   ssn->end_frame();
 }
 
+void App::frame() {
+  if (!is_initialized()) {
+    aout << "App is not initialized, cannot frame." << endl;
+    return;
+  }
+
+  if (!begin_frame()) {
+    // We can't begin a frame until the session is in a valid state.
+    static int frameCount = 0;
+    frameCount++;
+    if (frameCount % 60 == 0) {
+      aout << "Waiting for session to become synchronized, frame count: " << frameCount << endl;
+    }
+    return;
+  }
+
+  // Acquire the next image index for the swapchain
+  Swapchain sc = get_swapchain();
+  if (sc) {
+    uint32_t imageIndex = sc->acquire_and_wait_image();
+
+    // Render a frame
+    get_renderer()->render(imageIndex);
+
+    // add a layer to be submitted at the end of the frame
+    xrh::QuadLayer quad;
+    double t = get_session()->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
+
+    quad.set_pose(Posef(Quatf(Vector3f(0, 0, 1), t), Vector3f(0, 0, -1)));
+    quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
+    quad.set_swapchain(sc);
+    quad.set_space(get_local());
+    add_layer(quad);
+
+    sc->release_image();
+  }
+
+  end_frame();
+}
 }  // namespace xr

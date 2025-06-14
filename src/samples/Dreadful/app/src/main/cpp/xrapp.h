@@ -26,6 +26,8 @@ struct App {
   void add_layer(const xrh::Layer& layer);
   void end_frame();
 
+  void frame();
+
  private:
   android_app* app = nullptr;
   RendererPtr renderer;
