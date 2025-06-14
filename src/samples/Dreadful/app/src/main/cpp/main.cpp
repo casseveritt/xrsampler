@@ -83,7 +83,7 @@ void android_main(struct android_app* pApp) {
   android_poll_source* pSource;
   do {
     // Process all pending events before running game logic.
-    if (ALooper_pollAll(0, nullptr, &events, (void**)&pSource) >= 0) {
+    if (ALooper_pollOnce(0, nullptr, &events, (void**)&pSource) >= 0) {
       if (pSource) {
         pSource->process(pApp, pSource);
       }

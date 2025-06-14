@@ -6,16 +6,19 @@
 Shader* Shader::loadShader(const std::string& vertexSource, const std::string& fragmentSource,
                            const std::string& positionAttributeName, const std::string& uvAttributeName,
                            const std::string& projectionMatrixUniformName) {
+  aout << "Loading shader with vertex source:\n" << vertexSource << "\nand fragment source:\n" << fragmentSource << std::endl;
   Shader* shader = nullptr;
 
   GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vertexSource);
   if (!vertexShader) {
+    aout << "Failed to load vertex shader." << std::endl;
     return nullptr;
   }
 
   GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, fragmentSource);
   if (!fragmentShader) {
     glDeleteShader(vertexShader);
+    aout << "Failed to load fragment shader." << std::endl;
     return nullptr;
   }
 
@@ -49,7 +52,9 @@ Shader* Shader::loadShader(const std::string& vertexSource, const std::string& f
       // Only create a new shader if all the attributes are found.
       if (positionAttribute != -1 && uvAttribute != -1 && projectionMatrixUniform != -1) {
         shader = new Shader(program, positionAttribute, uvAttribute, projectionMatrixUniform);
+        aout << "Shader loaded successfully with program ID: " << program << std::endl;
       } else {
+        aout << "Failed to find all attributes or uniforms in shader program." << std::endl;
         glDeleteProgram(program);
       }
     }
@@ -119,6 +124,6 @@ void Shader::drawModel(const Model& model) const {
   glDisableVertexAttribArray(position_);
 }
 
-void Shader::setProjectionMatrix(float* projectionMatrix) const {
+void Shader::setProjectionMatrix(const float* projectionMatrix) const {
   glUniformMatrix4fv(projectionMatrix_, 1, false, projectionMatrix);
 }

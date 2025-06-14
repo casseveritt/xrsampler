@@ -59,7 +59,7 @@ class Shader {
    * Sets the model/view/projection matrix in the shader.
    * @param projectionMatrix sixteen floats, column major, defining an OpenGL projection matrix.
    */
-  void setProjectionMatrix(float* projectionMatrix) const;
+  void setProjectionMatrix(const float* projectionMatrix) const;
 
  private:
   /*!

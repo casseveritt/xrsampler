@@ -10,6 +10,7 @@
 #include "AndroidOut.h"
 #include "Shader.h"
 #include "TextureAsset.h"
+#include "linear.h"
 
 using namespace std;
 
@@ -138,6 +139,8 @@ void Renderer::render(uint32_t imageIndex) {
   // clear the color and depth buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  shader_->activate();
+
   // Render all the models. There's no depth testing in this sample so they're accepted in the
   // order provided. But the sample EGL setup requests a 24 bit depth buffer so you could
   // configure it at the end of initRenderer
@@ -264,9 +267,9 @@ void Renderer::initRenderer() {
 
   shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
 
-  // Note: there's only one shader in this demo, so I'll activate it here. For a more complex game
-  // you'll want to track the active shader and activate/deactivate it as necessary
   shader_->activate();
+  r3::Matrix4f projectionMatrix = r3::Matrix4f::Identity();
+  shader_->setProjectionMatrix(projectionMatrix.GetValue());
 
   // setup any other gl related global states
   glClearColor(CORNFLOWER_BLUE);

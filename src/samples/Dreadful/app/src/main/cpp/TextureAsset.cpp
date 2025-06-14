@@ -2,9 +2,14 @@
 
 #include <android/imagedecoder.h>
 
+#include <format>
+
 #include "AndroidOut.h"
 
+using namespace std;
+
 std::shared_ptr<TextureAsset> TextureAsset::loadAsset(AAssetManager* assetManager, const std::string& assetPath) {
+  aout << "Loading texture from asset: " << assetPath << endl;
   // Get the image from asset manager
   auto pAndroidRobotPng = AAssetManager_open(assetManager, assetPath.c_str(), AASSET_MODE_BUFFER);
 
@@ -23,6 +28,8 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(AAssetManager* assetManage
   auto width = AImageDecoderHeaderInfo_getWidth(pAndroidHeader);
   auto height = AImageDecoderHeaderInfo_getHeight(pAndroidHeader);
   auto stride = AImageDecoder_getMinimumStride(pAndroidDecoder);
+
+  aout << std::format("Image dimensions: {}x{}, stride: {}", width, height, stride) << endl;
 
   // Get the bitmap data of the image
   auto upAndroidImageData = std::make_unique<std::vector<uint8_t>>(height * stride);

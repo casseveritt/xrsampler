@@ -6,6 +6,8 @@ android {
     namespace = "us.xyzw.dreadful"
     compileSdk = 33
 
+    ndkVersion = "28.1.13356709"
+
     defaultConfig {
         applicationId = "us.xyzw.dreadful"
         minSdk = 31
@@ -17,6 +19,8 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++20"
+                abiFilters.clear()
+                abiFilters.add("arm64-v8a")
             }
         }
     }
