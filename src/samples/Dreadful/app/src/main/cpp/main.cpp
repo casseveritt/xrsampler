@@ -95,12 +95,9 @@ void android_main(struct android_app* pApp) {
     }
     // We know that our user data is a Renderer, so reinterpret cast it. If you change your
     // user data remember to change it here
-    auto& xr = *reinterpret_cast<xr::App*>(pApp->userData);
+    auto& xrapp = *reinterpret_cast<xr::App*>(pApp->userData);
 
-    // Process game input
-    xr.get_renderer()->handleInput();
-
-    if (!xr.begin_frame()) {
+    if (!xrapp.begin_frame()) {
       // We can't begin a frame until the session is in a valid state.
       static int frameCount = 0;
       frameCount++;
@@ -111,27 +108,27 @@ void android_main(struct android_app* pApp) {
     }
 
     // Acquire the next image index for the swapchain
-    Swapchain sc = xr.get_swapchain();
+    Swapchain sc = xrapp.get_swapchain();
     if (sc) {
       uint32_t imageIndex = sc->acquire_and_wait_image();
 
       // Render a frame
-      xr.get_renderer()->render(imageIndex);
+      xrapp.get_renderer()->render(imageIndex);
 
       // add a layer to be submitted at the end of the frame
       xrh::QuadLayer quad;
-      double t = xr.get_session()->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
+      double t = xrapp.get_session()->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
 
       quad.set_pose(Posef(Quatf(Vector3f(0, 0, 1), t), Vector3f(0, 0, -1)));
       quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
       quad.set_swapchain(sc);
-      quad.set_space(xr.get_local());
-      xr.add_layer(quad);
+      quad.set_space(xrapp.get_local());
+      xrapp.add_layer(quad);
 
       sc->release_image();
     }
 
-    xr.end_frame();
+    xrapp.end_frame();
   } while (!pApp->destroyRequested);
 }
 }

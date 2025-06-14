@@ -35,15 +35,6 @@ class Renderer {
   void setSwapchainImages(uint32_t width, uint32_t height, const std::span<GLuint>& images);
 
   /*!
-   * Handles input from the android_app.
-   *
-   * Note: this will clear the input queue
-   *
-   * TODO: Remove this from the renderer. It belongs in app logic.
-   */
-  void handleInput();
-
-  /*!
    * Renders all the models in the renderer to the specified image.
    */
   void render(uint32_t imageIndex);
