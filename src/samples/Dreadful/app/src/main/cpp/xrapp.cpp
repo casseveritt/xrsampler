@@ -52,35 +52,8 @@ App::~App() {
   aout << "Destroying App instance." << inst.get() << endl;
 }
 
-App::RendererPtr App::get_renderer() {
-  return renderer;
-}
-
-Session App::get_session() const {
-  return ssn;
-}
-
-Space App::get_local() const {
-  return local;
-}
-
 bool App::is_initialized() const {
   return bool(inst);
-}
-
-bool App::begin_frame() {
-  return ssn->begin_frame();
-}
-Swapchain App::get_swapchain() const {
-  return sc;
-}
-
-void App::add_layer(const Layer& layer) {
-  ssn->add_layer(layer);
-}
-
-void App::end_frame() {
-  ssn->end_frame();
 }
 
 void App::frame() {
@@ -89,7 +62,7 @@ void App::frame() {
     return;
   }
 
-  if (!begin_frame()) {
+  if (!ssn->begin_frame()) {
     // We can't begin a frame until the session is in a valid state.
     static int frameCount = 0;
     frameCount++;
@@ -99,27 +72,25 @@ void App::frame() {
     return;
   }
 
-  // Acquire the next image index for the swapchain
-  Swapchain sc = get_swapchain();
   if (sc) {
     uint32_t imageIndex = sc->acquire_and_wait_image();
 
     // Render a frame
-    get_renderer()->render(imageIndex);
+    renderer->render(imageIndex);
 
     // add a layer to be submitted at the end of the frame
     xrh::QuadLayer quad;
-    double t = get_session()->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
+    double t = ssn->get_predicted_display_time() * 1e-9;  // Convert from nanoseconds to seconds
 
     quad.set_pose(Posef(Quatf(Vector3f(0, 0, 1), t), Vector3f(0, 0, -1)));
     quad.set_size(1.0f, 1.0f);  // Set the size of the quad layer
     quad.set_swapchain(sc);
-    quad.set_space(get_local());
-    add_layer(quad);
+    quad.set_space(local);
+    ssn->add_layer(quad);
 
     sc->release_image();
   }
 
-  end_frame();
+  ssn->end_frame();
 }
 }  // namespace xr

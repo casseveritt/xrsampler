@@ -17,15 +17,7 @@ struct App {
 
   ~App();
 
-  RendererPtr get_renderer();
-  xrh::Session get_session() const;
-  xrh::Space get_local() const;
   bool is_initialized() const;
-  bool begin_frame();
-  xrh::Swapchain get_swapchain() const;
-  void add_layer(const xrh::Layer& layer);
-  void end_frame();
-
   void frame();
 
  private:
