@@ -17,6 +17,7 @@
 #include <openxr/openxr_platform.h>
 
 #include <array>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <span>
@@ -37,6 +38,7 @@ using Space = std::shared_ptr<SpaceOb>;
 using RefSpace = std::shared_ptr<RefSpaceOb>;
 using Swapchain = std::shared_ptr<SwapchainOb>;
 
+void set_ostream(std::ostream* out);
 Instance make_instance();
 
 #if defined(ANDROID)

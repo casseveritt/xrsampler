@@ -13,6 +13,7 @@ App::App(android_app* pApp)
 App::App()
 #endif
 {
+  set_ostream(&aout);
 #if defined(XR_USE_GRAPHICS_API_OPENGL_ES)
   renderer = make_shared<Renderer>(app);
   auto dpy = renderer->getDisplay();

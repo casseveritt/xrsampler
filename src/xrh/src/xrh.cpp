@@ -1,14 +1,18 @@
 #include "xrh.h"
 
-#include "AndroidOut.h"
-
 using namespace std;
+
+std::ostream* ostrptr = &std::cout;
+
+void xrh::set_ostream(std::ostream* out) {
+  ostrptr = out;
+}
 
 XrResult XRH_CheckErrors(XrResult result, const char* function) {
   if (XR_FAILED(result)) {
     char errorBuffer[XR_MAX_RESULT_STRING_SIZE];
     xrResultToString(XR_NULL_HANDLE, result, errorBuffer);
-    aout << "OpenXR error: " << function << ": (" << result << ") " << errorBuffer << endl;
+    if (ostrptr) (*ostrptr) << "OpenXR error: " << function << ": (" << result << ") " << errorBuffer << endl;
   }
   return result;
 }
@@ -62,8 +66,9 @@ XrExtensionProperties make_ext_prop(const char* name, uint32_t ver) {
 XrInstanceProperties get_instance_properties(XrInstance inst) {
   XrInstanceProperties ii = {XR_TYPE_INSTANCE_PROPERTIES};
   XRH(xrGetInstanceProperties(inst, &ii));
-  aout << "Runtime: " << ii.runtimeName << "Version: " << XR_VERSION_MAJOR(ii.runtimeVersion) << "."
-       << XR_VERSION_MINOR(ii.runtimeVersion) << "." << XR_VERSION_PATCH(ii.runtimeVersion) << endl;
+  if (ostrptr)
+    (*ostrptr) << "Runtime: " << ii.runtimeName << "Version: " << XR_VERSION_MAJOR(ii.runtimeVersion) << "."
+               << XR_VERSION_MINOR(ii.runtimeVersion) << "." << XR_VERSION_PATCH(ii.runtimeVersion) << endl;
   return ii;
 }
 
@@ -75,7 +80,7 @@ XrSystemId get_system_id(XrInstance inst) {
   XrResult res;
   XRH(res = xrGetSystem(inst, &sysGetInfo, &sysid));
   if (res != XR_SUCCESS) {
-    aout << "Failed to get system." << endl;
+    if (ostrptr) (*ostrptr) << "Failed to get system." << endl;
     return XR_NULL_SYSTEM_ID;
   }
   return sysid;
@@ -85,11 +90,12 @@ XrSystemProperties get_system_properties(XrInstance inst, XrSystemId sysid) {
   XrSystemProperties sysprops = {XR_TYPE_SYSTEM_PROPERTIES};
   XRH(xrGetSystemProperties(inst, sysid, &sysprops));
 
-  aout << "System Properties: Name=" << sysprops.systemName << " VendorId=" << sysprops.vendorId << endl;
-  aout << "System Graphics Properties:"
-       << " MaxWidth=" << sysprops.graphicsProperties.maxSwapchainImageWidth
-       << " MaxHeight=" << sysprops.graphicsProperties.maxSwapchainImageHeight
-       << " MaxLayers=" << sysprops.graphicsProperties.maxLayerCount << endl;
+  if (ostrptr) (*ostrptr) << "System Properties: Name=" << sysprops.systemName << " VendorId=" << sysprops.vendorId << endl;
+  if (ostrptr)
+    (*ostrptr) << "System Graphics Properties:"
+               << " MaxWidth=" << sysprops.graphicsProperties.maxSwapchainImageWidth
+               << " MaxHeight=" << sysprops.graphicsProperties.maxSwapchainImageHeight
+               << " MaxLayers=" << sysprops.graphicsProperties.maxLayerCount << endl;
   return sysprops;
 }
 
@@ -140,7 +146,7 @@ Instance make_instance() {
 InstanceOb::InstanceOb() {}
 
 InstanceOb::~InstanceOb() {
-  aout << "Destroying InstanceOb: " << inst << endl;
+  if (ostrptr) (*ostrptr) << "Destroying InstanceOb: " << inst << endl;
   destroy();
 }
 
@@ -161,7 +167,8 @@ bool InstanceOb::create() {
       ext.enabled.push_back(req);
     } else {
       foundRequired = false;
-      aout << "Required extension not supported: " << req.extensionName << "(v" << req.extensionVersion << ")" << endl;
+      if (ostrptr)
+        (*ostrptr) << "Required extension not supported: " << req.extensionName << "(v" << req.extensionVersion << ")" << endl;
     }
   }
   if (!foundRequired) {
@@ -171,7 +178,8 @@ bool InstanceOb::create() {
     if (ext_supported(ext.available, des)) {
       ext.enabled.push_back(des);
     } else {
-      aout << "Desired extension not supported: " << des.extensionName << "(v" << des.extensionVersion << ")" << endl;
+      if (ostrptr)
+        (*ostrptr) << "Desired extension not supported: " << des.extensionName << "(v" << des.extensionVersion << ")" << endl;
     }
   }
   vector<const char*> extNames;
@@ -190,7 +198,7 @@ bool InstanceOb::create() {
   inst = XR_NULL_HANDLE;
   auto res = XRH(xrCreateInstance(&ci, &inst));
   if (inst == XR_NULL_HANDLE) {
-    aout << "XrInstance creation failed." << endl;
+    if (ostrptr) (*ostrptr) << "XrInstance creation failed." << endl;
     return false;
   }
 
@@ -212,7 +220,7 @@ bool InstanceOb::create() {
 
   XRH(xrEnumerateViewConfigurations(inst, sysid, viewConfigTypeCount, &viewConfigTypeCount, viewConfigTypes.data()));
 
-  aout << "Available Viewport Configuration Types: " << viewConfigTypeCount << endl;
+  if (ostrptr) (*ostrptr) << "Available Viewport Configuration Types: " << viewConfigTypeCount << endl;
 
   bool succeeded = false;
   for (const auto& vct : viewConfigTypes) {
@@ -229,7 +237,7 @@ bool InstanceOb::create() {
     XrViewConfigurationProperties vcp = {XR_TYPE_VIEW_CONFIGURATION_PROPERTIES};
     XRH(xrGetViewConfigurationProperties(inst, sysid, vct, &vcp));
     fov_mutable = vcp.fovMutable;
-    aout << "fov_mutable=" << fov_mutable << endl;
+    if (ostrptr) (*ostrptr) << "fov_mutable=" << fov_mutable << endl;
 
     for (auto& vcv : view_config_views) {
       vcv = {XR_TYPE_VIEW_CONFIGURATION_VIEW};
@@ -239,8 +247,9 @@ bool InstanceOb::create() {
 
     {
       auto& e = view_config_views[0];
-      aout << "recommended dims: [w=" << e.recommendedImageRectWidth << ", h=" << e.recommendedImageRectHeight
-           << ", s=" << e.recommendedSwapchainSampleCount << "]" << endl;
+      if (ostrptr)
+        (*ostrptr) << "recommended dims: [w=" << e.recommendedImageRectWidth << ", h=" << e.recommendedImageRectHeight
+                   << ", s=" << e.recommendedSwapchainSampleCount << "]" << endl;
     }
     succeeded = true;
   }
@@ -275,7 +284,7 @@ Session InstanceOb::create_session() {
 
   auto res = XRH(xrCreateSession(inst, &ci, &sess));
   if (sess == XR_NULL_HANDLE) {
-    aout << "XrSession creation failed." << endl;
+    if (ostrptr) (*ostrptr) << "XrSession creation failed." << endl;
     return nullptr;
   }
   return std::make_shared<SessionOb>(shared_from_this(), sess);
@@ -293,20 +302,20 @@ SessionOb::SessionOb(Instance inst_, XrSession ssn_) : inst(inst_), ssn(ssn_) {
 }
 
 SessionOb::~SessionOb() {
-  aout << "Destroying SessionOb: " << ssn << endl;
+  if (ostrptr) (*ostrptr) << "Destroying SessionOb: " << ssn << endl;
   XRH(xrDestroySession(ssn));
 }
 
 Space SessionOb::create_refspace(const XrReferenceSpaceCreateInfo& createInfo) {
   if (refspacetypes.find(createInfo.referenceSpaceType) == refspacetypes.end()) {
-    aout << "Unsupported reference space type." << endl;
+    if (ostrptr) (*ostrptr) << "Unsupported reference space type." << endl;
     return nullptr;
   }
 
   XrSpace spacehandle = XR_NULL_HANDLE;
   auto res = XRH(xrCreateReferenceSpace(ssn, &createInfo, &spacehandle));
   if (res != XR_SUCCESS) {
-    aout << "Reference space creation failed." << endl;
+    if (ostrptr) (*ostrptr) << "Reference space creation failed." << endl;
     return nullptr;
   }
   return make_shared<RefSpace::element_type>(shared_from_this(), spacehandle, createInfo);
@@ -316,7 +325,7 @@ Swapchain SessionOb::create_swapchain(const XrSwapchainCreateInfo& createInfo) {
   XrSwapchain sc;
   auto res = XRH(xrCreateSwapchain(ssn, &createInfo, &sc));
   if (res != XR_SUCCESS) {
-    aout << "Swapchain creation failed." << endl;
+    if (ostrptr) (*ostrptr) << "Swapchain creation failed." << endl;
   }
   return make_shared<Swapchain::element_type>(shared_from_this(), sc, createInfo);
 }
@@ -330,7 +339,7 @@ bool SessionOb::begin_frame() {
       case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
         auto& ssc = *reinterpret_cast<XrEventDataSessionStateChanged*>(&edb);
         state = ssc.state;
-        aout << "Session state changed: " << ToString(state) << endl;
+        if (ostrptr) (*ostrptr) << "Session state changed: " << ToString(state) << endl;
         switch (state) {
           case XR_SESSION_STATE_READY: {
             XrSessionBeginInfo sbi{XR_TYPE_SESSION_BEGIN_INFO};
@@ -398,7 +407,7 @@ void SessionOb::end_frame() {
 SpaceOb::SpaceOb(Session ssn_, XrSpace space_, SpaceOb::Type type_) : ssn(ssn_), space(space_), type(type_) {}
 
 SpaceOb::~SpaceOb() {
-  aout << "Destroying SpaceOb: " << space << endl;
+  if (ostrptr) (*ostrptr) << "Destroying SpaceOb: " << space << endl;
   XRH(xrDestroySpace(space));
 }
 
@@ -424,7 +433,7 @@ SwapchainOb::SwapchainOb(Session ssn_, XrSwapchain swapchain_, const XrSwapchain
 }
 
 SwapchainOb::~SwapchainOb() {
-  aout << "Destroying SwapchainOb: " << swapchain << endl;
+  if (ostrptr) (*ostrptr) << "Destroying SwapchainOb: " << swapchain << endl;
   XRH(xrDestroySwapchain(swapchain));
 }
 
@@ -440,7 +449,7 @@ XrCompositionLayerQuad QuadLayer::get_xr_quad_layer() const {
 }
 
 Layer::~Layer() {
-  // aout << "Destroying Layer: " << this << endl;
+  // if (ostrptr) (*ostrptr) << "Destroying Layer: " << this << endl;
 }
 
 }  // namespace xrh

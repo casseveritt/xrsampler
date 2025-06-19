@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("awful")
 
+add_subdirectory(../../../../../../xrh xrh)
+
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
 add_library(awful SHARED
@@ -14,7 +16,7 @@ add_library(awful SHARED
         Shader.cpp
         TextureAsset.cpp
         xrapp.cpp
-        xrh.cpp)
+)
 
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)
@@ -31,6 +33,7 @@ add_definitions(-DXR_USE_PLATFORM_ANDROID=1)
 
 # Configure libraries CMake uses to link your target library.
 target_link_libraries(awful
+        xrh
 
         # OpenXR loader support
         OpenXR::openxr_loader
