@@ -7,7 +7,8 @@ project("awful")
 
 add_subdirectory(../../../../../../xrh xrh)
 
-add_subdirectory(../../../../../../tinygltf tinygltf)
+add_definitions(-DTINYGLTF_ANDROID_LOAD_FROM_ASSETS)
+include_directories(../../../../../../tinygltf)
 
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
@@ -17,6 +18,7 @@ add_library(awful SHARED
         Renderer.cpp
         Shader.cpp
         TextureAsset.cpp
+        gltfloader.cpp
         xrapp.cpp
 )
 
@@ -37,8 +39,6 @@ add_definitions(-DXR_USE_PLATFORM_ANDROID=1)
 target_link_libraries(awful
         xrh
 
-        tinygltf
-        
         # OpenXR loader support
         OpenXR::openxr_loader
 
