@@ -11,6 +11,7 @@
 #include "Shader.h"
 #include "TextureAsset.h"
 #include "linear.h"
+#include "tiny_gltf.h"
 
 using namespace std;
 

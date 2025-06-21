@@ -1,0 +1,19 @@
+{
+    // See https://code.visualstudio.com/docs/editor/tasks for more information
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Gradle Project",
+            "type": "shell",
+            "command": "./gradlew build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        }
+    ]
+}
