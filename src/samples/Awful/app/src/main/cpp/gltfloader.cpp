@@ -20,6 +20,13 @@ bool LoadGltfModelFromAsset(AAssetManager* assetManager, const std::string& asse
     ret = loader.LoadASCIIFromFile(model, &err, &warn, assetPath);
   }
 
+  if (ret) {
+    __android_log_print(ANDROID_LOG_INFO, "TinyGLTF", "Loaded GLTF model: %zu meshes, %zu nodes, %zu materials, %zu images",
+                        model->meshes.size(), model->nodes.size(), model->materials.size(), model->images.size());
+  } else {
+    __android_log_print(ANDROID_LOG_ERROR, "TinyGLTF", "Failed to load GLTF model from %s", assetPath.c_str());
+  }
+
   if (!warn.empty()) {
     __android_log_print(ANDROID_LOG_WARN, "TinyGLTF", "Warn: %s", warn.c_str());
   }

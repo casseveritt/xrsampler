@@ -7,6 +7,7 @@
 
 #include "AndroidOut.h"
 #include "Renderer.h"
+#include "gltfloader.h"
 #include "xrapp.h"
 #include "xrh.h"
 #include "xrhlinear.h"
@@ -77,6 +78,9 @@ void android_main(struct android_app* pApp) {
     aout << "OpenXR loader initialization failed, exiting" << endl;
     return;
   }
+
+  tinygltf::Model model;
+  LoadGltfModelFromAsset(pApp->activity->assetManager, "cartoony_rubber_ducky/scene.gltf", &model);
 
   // This sets up a typical game/event loop. It will run until the app is destroyed.
   int events;
