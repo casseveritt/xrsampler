@@ -104,10 +104,10 @@ Renderer::~Renderer() {
   }
 }
 
-void Renderer::render(uint32_t imageIndex) {
+void Renderer::bindFbo(uint32_t imageIndex) {
   // Make sure we have a valid context
   if (context_ == EGL_NO_CONTEXT || display_ == EGL_NO_DISPLAY || surface_ == EGL_NO_SURFACE) {
-    aout << "Renderer::render() called without a valid EGL context, display, or surface" << endl;
+    aout << "Renderer::bindFbo() called without a valid EGL context, display, or surface" << endl;
     return;
   }
 
@@ -126,8 +126,10 @@ void Renderer::render(uint32_t imageIndex) {
     aout << "Framebuffer not complete: 0x" << std::hex << status << std::dec << endl;
     return;
   }
+}
 
-  glViewport(0, 0, colorImages_[imageIndex].width, colorImages_[imageIndex].height);
+void Renderer::render() {
+  glViewport(0, 0, colorImages_[0].width, colorImages_[0].height);
 
   static int frameCount = 0;
   frameCount++;
@@ -150,8 +152,9 @@ void Renderer::render(uint32_t imageIndex) {
       shader_->drawModel(model);
     }
   }
+}
 
-  // Unbind the fbo
+void Renderer::unbindFbo() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

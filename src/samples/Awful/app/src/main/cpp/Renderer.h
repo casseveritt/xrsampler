@@ -37,7 +37,7 @@ class Renderer {
   /*!
    * Renders all the models in the renderer to the specified image.
    */
-  void render(uint32_t imageIndex);
+  void render();
 
   EGLDisplay getDisplay() {
     return display_;
@@ -50,6 +50,9 @@ class Renderer {
   EGLContext getContext() {
     return context_;
   }
+
+  void bindFbo(uint32_t imageIndex);
+  void unbindFbo();
 
  private:
   /*!

@@ -16,6 +16,7 @@ add_library(awful SHARED
         main.cpp
         AndroidOut.cpp
         Renderer.cpp
+        GltfRenderer.cpp
         Shader.cpp
         TextureAsset.cpp
         gltfloader.cpp

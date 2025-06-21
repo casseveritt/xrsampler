@@ -1,6 +1,9 @@
 #include "xrapp.h"
 
+#include <game-activity/native_app_glue/android_native_app_glue.h>
+
 #include "AndroidOut.h"
+#include "gltfloader.h"
 
 using namespace xrh;
 using namespace std;
@@ -47,10 +50,15 @@ App::App()
   sc = ssn->create_swapchain(scci);
 
   renderer->setSwapchainImages(sc->get_width(), sc->get_height(), sc->enumerate_images());
+
+  LoadGltfModelFromAsset(app->activity->assetManager, "cartoony_rubber_ducky/scene.gltf", &model);
+
+  gltfRenderer.Init(model);
 }
 
 App::~App() {
   aout << "Destroying App instance." << inst.get() << endl;
+  gltfRenderer.Destroy();
 }
 
 bool App::is_initialized() const {
@@ -77,7 +85,10 @@ void App::frame() {
     uint32_t imageIndex = sc->acquire_and_wait_image();
 
     // Render a frame
-    renderer->render(imageIndex);
+    renderer->bindFbo(imageIndex);
+    renderer->render();
+    gltfRenderer.Render();
+    renderer->unbindFbo();
 
     // add a layer to be submitted at the end of the frame
     xrh::QuadLayer quad;

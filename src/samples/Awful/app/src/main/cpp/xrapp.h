@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "GltfRenderer.h"
 #include "Renderer.h"
 #include "xrh.h"
 
@@ -27,6 +28,8 @@ struct App {
   xrh::Session ssn;
   xrh::Space local;
   xrh::Swapchain sc;
+  tinygltf::Model model;
+  GltfRenderer gltfRenderer;
 };
 
 }  // namespace xr
