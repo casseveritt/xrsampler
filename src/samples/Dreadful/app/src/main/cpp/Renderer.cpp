@@ -269,7 +269,7 @@ void Renderer::initRenderer() {
 
   shader_->activate();
   r3::Matrix4f projectionMatrix = r3::Matrix4f::Identity();
-  shader_->setProjectionMatrix(projectionMatrix.GetValue());
+  shader_->setProjectionMatrix(projectionMatrix.data());
 
   // setup any other gl related global states
   glClearColor(CORNFLOWER_BLUE);

@@ -324,7 +324,7 @@ class Vec3 {
     return N;
   }
 
-  const T* GetValue() const {
+  const T* data() const {
     return v;
   }
 
@@ -556,7 +556,7 @@ class Vec4 {
     return N;
   }
 
-  const T* GetValue() const {
+  const T* data() const {
     return v;
   }
 
@@ -1038,7 +1038,7 @@ class Matrix4 {
     }
   }
 
-  const T* GetValue() const {
+  const T* data() const {
     return m;
   }
 
@@ -1539,7 +1539,7 @@ class Quaternion {
     SetValue(fromLook, fromUp, toLook, toUp);
   }
 
-  const T* GetValue() const {
+  const T* data() const {
     return &q[0];
   }
 

@@ -273,7 +273,7 @@ void Renderer::initRenderer() {
 
   shader_->activate();
   r3::Matrix4f toClipFromObject = r3::Matrix4f::Identity();
-  shader_->setToClipFromObject(toClipFromObject.GetValue());
+  shader_->setToClipFromObject(toClipFromObject);
 
   // setup any other gl related global states
   glClearColor(CORNFLOWER_BLUE);

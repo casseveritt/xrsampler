@@ -124,6 +124,6 @@ void Shader::drawModel(const Model& model) const {
   glDisableVertexAttribArray(position_);
 }
 
-void Shader::setToClipFromObject(const float* toClipFromObject) const {
-  glUniformMatrix4fv(toClipFromObject_, 1, false, toClipFromObject);
+void Shader::setToClipFromObject(const r3::Matrix4f& toClipFromObject) const {
+  glUniformMatrix4fv(toClipFromObject_, 1, false, toClipFromObject.data());
 }

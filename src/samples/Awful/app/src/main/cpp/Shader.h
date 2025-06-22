@@ -5,6 +5,8 @@
 
 #include <string>
 
+#include "linear.h"
+
 class Model;
 
 /*!
@@ -59,7 +61,7 @@ class Shader {
    * Sets the model/view/projection matrix in the shader.
    * @param toClipFromObject sixteen floats, column major, defining an OpenGL "MVP" matrix.
    */
-  void setToClipFromObject(const float* toClipFromObject) const;
+  void setToClipFromObject(const r3::Matrix4f& toClipFromObject) const;
 
  private:
   /*!
