@@ -272,8 +272,8 @@ void Renderer::initRenderer() {
   shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
 
   shader_->activate();
-  r3::Matrix4f projectionMatrix = r3::Matrix4f::Identity();
-  shader_->setProjectionMatrix(projectionMatrix.GetValue());
+  r3::Matrix4f toClipFromObject = r3::Matrix4f::Identity();
+  shader_->setToClipFromObject(toClipFromObject.GetValue());
 
   // setup any other gl related global states
   glClearColor(CORNFLOWER_BLUE);

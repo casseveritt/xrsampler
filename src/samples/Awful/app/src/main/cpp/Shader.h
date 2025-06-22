@@ -25,12 +25,12 @@ class Shader {
    * @param fragmentSource The full source code of your fragment program
    * @param positionAttributeName The name of the position attribute in your vertex program
    * @param uvAttributeName The name of the uv coordinate attribute in your vertex program
-   * @param projectionMatrixUniformName The name of your model/view/projection matrix uniform
+   * @param toClipFromObjectUniformName The name of your model/view/projection matrix uniform
    * @return a valid Shader on success, otherwise null.
    */
   static Shader* loadShader(const std::string& vertexSource, const std::string& fragmentSource,
                             const std::string& positionAttributeName, const std::string& uvAttributeName,
-                            const std::string& projectionMatrixUniformName);
+                            const std::string& toClipFromObjectUniformName);
 
   inline ~Shader() {
     if (program_) {
@@ -57,9 +57,9 @@ class Shader {
 
   /*!
    * Sets the model/view/projection matrix in the shader.
-   * @param projectionMatrix sixteen floats, column major, defining an OpenGL projection matrix.
+   * @param toClipFromObject sixteen floats, column major, defining an OpenGL "MVP" matrix.
    */
-  void setProjectionMatrix(const float* projectionMatrix) const;
+  void setToClipFromObject(const float* toClipFromObject) const;
 
  private:
   /*!
@@ -75,15 +75,15 @@ class Shader {
    * @param program the GL program id of the shader
    * @param position the attribute location of the position
    * @param uv the attribute location of the uv coordinates
-   * @param projectionMatrix the uniform location of the projection matrix
+   * @param toClipFromObject the uniform location of the projection matrix
    */
-  constexpr Shader(GLuint program, GLint position, GLint uv, GLint projectionMatrix)
-      : program_(program), position_(position), uv_(uv), projectionMatrix_(projectionMatrix) {}
+  constexpr Shader(GLuint program, GLint position, GLint uv, GLint toClipFromObject)
+      : program_(program), position_(position), uv_(uv), toClipFromObject_(toClipFromObject) {}
 
   GLuint program_;
   GLint position_;
   GLint uv_;
-  GLint projectionMatrix_;
+  GLint toClipFromObject_;
 };
 
 #endif  // ANDROIDGLINVESTIGATIONS_SHADER_H
