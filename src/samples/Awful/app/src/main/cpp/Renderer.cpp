@@ -47,11 +47,11 @@ in vec2 inUV;
 
 out vec2 fragUV;
 
-uniform mat4 uProjection;
+uniform mat4 uToClipFromObject;
 
 void main() {
     fragUV = inUV;
-    gl_Position = uProjection * vec4(inPosition, 1.0);
+    gl_Position = uToClipFromObject * vec4(inPosition, 1.0);
 }
 )vertex";
 
@@ -269,7 +269,7 @@ void Renderer::initRenderer() {
   // Create a framebuffer object to render to
   glGenFramebuffers(1, &fbo);
 
-  shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uProjection"));
+  shader_ = unique_ptr<Shader>(Shader::loadShader(vertex, fragment, "inPosition", "inUV", "uToClipFromObject"));
 
   shader_->activate();
   r3::Matrix4f toClipFromObject = r3::Matrix4f::Identity();
@@ -299,10 +299,10 @@ void Renderer::createModels() {
    * 0 --- 1
    */
   vector<Vertex> vertices = {
-      Vertex(Vector3{1, 1, 0}, Vector2{0, 0}),    // 0
-      Vertex(Vector3{-1, 1, 0}, Vector2{1, 0}),   // 1
-      Vertex(Vector3{-1, -1, 0}, Vector2{1, 1}),  // 2
-      Vertex(Vector3{1, -1, 0}, Vector2{0, 1})    // 3
+      Vertex(r3::Vec3f{1, 1, 0}, r3::Vec2f{0, 0}),    // 0
+      Vertex(r3::Vec3f{-1, 1, 0}, r3::Vec2f{1, 0}),   // 1
+      Vertex(r3::Vec3f{-1, -1, 0}, r3::Vec2f{1, 1}),  // 2
+      Vertex(r3::Vec3f{1, -1, 0}, r3::Vec2f{0, 1})    // 3
   };
   vector<Index> indices = {0, 1, 2, 0, 2, 3};
 

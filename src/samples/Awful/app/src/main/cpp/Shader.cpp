@@ -110,7 +110,7 @@ void Shader::drawModel(const Model& model) const {
   glEnableVertexAttribArray(position_);
 
   // The uv attribute is 2 floats
-  glVertexAttribPointer(uv_, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((uint8_t*)model.getVertexData()) + sizeof(Vector3));
+  glVertexAttribPointer(uv_, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((uint8_t*)model.getVertexData()) + sizeof(r3::Vec3f));
   glEnableVertexAttribArray(uv_);
 
   // Setup the texture
