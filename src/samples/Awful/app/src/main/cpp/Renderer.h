@@ -39,6 +39,10 @@ class Renderer {
    */
   void render();
 
+  Shader* getShader() {
+    return shader_.get();
+  }
+
   EGLDisplay getDisplay() {
     return display_;
   }

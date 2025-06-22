@@ -87,7 +87,7 @@ void App::frame() {
     // Render a frame
     renderer->bindFbo(imageIndex);
     renderer->render();
-    gltfRenderer.Render();
+    gltfRenderer.Render(renderer->getShader());
     renderer->unbindFbo();
 
     // add a layer to be submitted at the end of the frame

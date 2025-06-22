@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Shader.h"
 #include "linear.h"
 #include "tiny_gltf.h"
 
@@ -18,15 +19,14 @@ class GltfRenderer {
   bool Init(const tinygltf::Model& model);
 
   // Render the model (call every frame as needed)
-  void Render();
+  void Render(Shader* shader);
 
   // Destroy OpenGL resources
   void Destroy();
 
  private:
-  struct BufferViewGL {
+  struct BufferGL {
     GLuint buffer = 0;
-    GLenum target = 0;
     GLsizeiptr size = 0;
   };
 
@@ -37,7 +37,7 @@ class GltfRenderer {
   };
 
   // Store OpenGL handles for each bufferView and texture
-  std::vector<BufferViewGL> bufferViewsGL_;
+  std::vector<BufferGL> buffersGL_;
   std::vector<TextureGL> texturesGL_;
 
   // Store VAOs for each mesh/primitive
@@ -51,7 +51,7 @@ class GltfRenderer {
   bool CreateTextures(const tinygltf::Model& model);
   bool CreateVertexArrays(const tinygltf::Model& model);
 
-  void DrawNode(int nodeIndex, const r3::Matrix4f& parentMatrix);
+  void DrawNode(int nodeIndex, const r3::Matrix4f& parentMatrix, Shader* shader);
 
   // Add your shader program(s) and uniform locations here
   GLuint shaderProgram_ = 0;

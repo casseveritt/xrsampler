@@ -19,52 +19,137 @@ bool GltfRenderer::Init(const tinygltf::Model& model) {
   return true;
 }
 
-void GltfRenderer::Render() {
+void GltfRenderer::Render(Shader* shader) {
   __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "Render called");
   if (!model_) return;
+  shader->activate();
   // For each scene node, draw recursively
   for (const auto& scene : model_->scenes) {
     for (int nodeIdx : scene.nodes) {
-      DrawNode(nodeIdx, r3::Matrix4f::Identity());
+      DrawNode(nodeIdx, r3::Matrix4f::Identity(), shader);
     }
   }
+  shader->deactivate();
 }
 
 void GltfRenderer::Destroy() {
   __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "Destroy called");
-  for (auto& bv : bufferViewsGL_) {
-    if (bv.buffer) glDeleteBuffers(1, &bv.buffer);
+  for (auto& b : buffersGL_) {
+    if (b.buffer) glDeleteBuffers(1, &b.buffer);
   }
   for (auto& tex : texturesGL_) {
     if (tex.texture) glDeleteTextures(1, &tex.texture);
   }
-  for (auto vao : vaos_) {
-    if (vao) glDeleteVertexArrays(1, &vao);
-  }
-  bufferViewsGL_.clear();
+  glDeleteVertexArrays(vaos_.size(), vaos_.data());
+  buffersGL_.clear();
   texturesGL_.clear();
   vaos_.clear();
-  // TODO: Delete shader program(s)
 }
 
 bool GltfRenderer::CreateBuffers(const tinygltf::Model& model) {
   __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "CreateBuffers called");
   // Allocate OpenGL buffers for each bufferView
-  bufferViewsGL_.resize(model.bufferViews.size());
-  for (size_t i = 0; i < model.bufferViews.size(); ++i) {
-    const auto& bv = model.bufferViews[i];
-    __android_log_print(ANDROID_LOG_INFO, "GltfRenderer",
-                        "Creating bufferView %zu: buffer=%d, target=0x%x, byteOffset=%zu, byteLength=%zu", i, bv.buffer,
-                        bv.target, bv.byteOffset, bv.byteLength);
-    GLuint buffer = 0;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(bv.target, buffer);
-    const auto& buf = model.buffers[bv.buffer];
-    glBufferData(bv.target, bv.byteLength, &buf.data.at(bv.byteOffset), GL_STATIC_DRAW);
-    bufferViewsGL_[i] = {buffer, (GLenum)bv.target, (GLsizeiptr)bv.byteLength};
+  std::vector<GLuint> buffers(model.buffers.size());
+  buffersGL_.resize(model.buffers.size());
+  glGenBuffers(model.buffers.size(), buffers.data());
+
+  for (size_t i = 0; i < model.buffers.size(); ++i) {
+    const auto& buf = model.buffers[i];
+    auto buffer = buffers[i];
+    buffersGL_[i].buffer = buffer;
+    buffersGL_[i].size = buf.data.size();
+    // We don't know the target yet; will bind as needed for bufferViews
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, buf.data.size(), buf.data.data(), GL_STATIC_DRAW);
+    __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "Created buffer %zu: size=%zu", i, buf.data.size());
   }
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  return true;
+}
+
+namespace {
+GLint numComponents(const int type) {
+  switch (type) {
+    case TINYGLTF_TYPE_SCALAR:
+      return 1;
+    case TINYGLTF_TYPE_VEC2:
+      return 2;
+    case TINYGLTF_TYPE_VEC3:
+      return 3;
+    case TINYGLTF_TYPE_VEC4:
+      return 4;
+    case TINYGLTF_TYPE_MAT2:
+      return 4;  // 2x2 matrix
+    case TINYGLTF_TYPE_MAT3:
+      return 9;  // 3x3 matrix
+    case TINYGLTF_TYPE_MAT4:
+      return 16;  // 4x4 matrix
+    default:
+      return 0;  // Unsupported type
+  }
+}
+
+GLenum glComponentType(const int componentType) {
+  switch (componentType) {
+    case TINYGLTF_COMPONENT_TYPE_BYTE:
+      return GL_BYTE;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+      return GL_UNSIGNED_BYTE;
+    case TINYGLTF_COMPONENT_TYPE_SHORT:
+      return GL_SHORT;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+      return GL_UNSIGNED_SHORT;
+    case TINYGLTF_COMPONENT_TYPE_INT:
+      return GL_INT;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+      return GL_UNSIGNED_INT;
+    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+      return GL_FLOAT;
+    default:
+      return 0;  // Unsupported type
+  }
+}
+
+}  // namespace
+
+bool GltfRenderer::CreateVertexArrays(const tinygltf::Model& model) {
+  __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "CreateVertexArrays called");
+  // For each mesh/primitive, create a VAO and set up attribute pointers
+  // This is a simplified example; real code should handle all attribute types and buffer bindings
+  int numVaos = 0;
+  for (const auto& mesh : model.meshes) {
+    for (const auto& prim : mesh.primitives) {
+      numVaos++;
+    }
+  }
+  vaos_.reserve(numVaos);
+  for (const auto& mesh : model.meshes) {
+    for (const auto& prim : mesh.primitives) {
+      __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "Creating VAO for mesh");
+      GLuint vao = 0;
+      glGenVertexArrays(1, &vao);
+      glBindVertexArray(vao);
+
+      // Start with just indices (if any) and position.
+      if (prim.indices >= 0 && prim.indices < model.accessors.size()) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffersGL_[prim.indices].buffer);
+      }
+
+      const int pos = prim.attributes.at("POSITION");
+      if (pos >= 0 && pos < model.accessors.size()) {
+        const auto& bvIdx = model.accessors[pos].bufferView;
+        const auto& bv = model.bufferViews[bvIdx];
+        glBindBuffer(GL_ARRAY_BUFFER, buffersGL_[bvIdx].buffer);
+        glEnableVertexAttribArray(0);  // Position attribute
+        const auto& accessor = model.accessors[pos];
+        glVertexAttribPointer(0, numComponents(accessor.type), glComponentType(accessor.componentType), GL_FALSE,
+                              accessor.ByteStride(bv), reinterpret_cast<const GLvoid*>(accessor.byteOffset));
+      }
+
+      vaos_.push_back(vao);
+    }
+  }
+  glBindVertexArray(0);
   return true;
 }
 
@@ -85,25 +170,6 @@ bool GltfRenderer::CreateTextures(const tinygltf::Model& model) {
     texturesGL_[i] = {tex, img.width, img.height};
   }
   glBindTexture(GL_TEXTURE_2D, 0);
-  return true;
-}
-
-bool GltfRenderer::CreateVertexArrays(const tinygltf::Model& model) {
-  __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "CreateVertexArrays called");
-  // For each mesh/primitive, create a VAO and set up attribute pointers
-  // This is a simplified example; real code should handle all attribute types and buffer bindings
-  for (const auto& mesh : model.meshes) {
-    for (const auto& prim : mesh.primitives) {
-      __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "Creating VAO for mesh");
-      GLuint vao = 0;
-      glGenVertexArrays(1, &vao);
-      glBindVertexArray(vao);
-      // Bind attributes, index buffer, etc.
-      // ...
-      vaos_.push_back(vao);
-    }
-  }
-  glBindVertexArray(0);
   return true;
 }
 
@@ -149,22 +215,23 @@ r3::Matrix4f GetNodeTransform(const tinygltf::Node& node) {
 }
 }  // namespace
 
-void GltfRenderer::DrawNode(int nodeIndex, const r3::Matrix4f& parentMatrix) {
+void GltfRenderer::DrawNode(int nodeIndex, const r3::Matrix4f& parentMatrix, Shader* shader) {
   __android_log_print(ANDROID_LOG_INFO, "GltfRenderer", "DrawNode called for node %d", nodeIndex);
   const auto& node = model_->nodes[nodeIndex];
-  r3::Matrix4f localMatrix = parentMatrix * GetNodeTransform(node);
+  r3::Matrix4f toClipFromObject = parentMatrix * GetNodeTransform(node);
 
+  int currVaoIdx = -1;
   if (node.mesh >= 0 && node.mesh < model_->meshes.size()) {
     const auto& mesh = model_->meshes[node.mesh];
     for (size_t primIdx = 0; primIdx < mesh.primitives.size(); ++primIdx) {
+      currVaoIdx++;
       const auto& prim = mesh.primitives[primIdx];
-      // Bind VAO for this primitive (assumes 1:1 mapping)
-      size_t vaoIdx = node.mesh;  // This may need adjustment if VAOs are per-primitive
-      if (vaoIdx < vaos_.size()) {
-        glBindVertexArray(vaos_[vaoIdx]);
+      if (currVaoIdx < vaos_.size()) {
+        glBindVertexArray(vaos_[currVaoIdx]);
       }
       // TODO: Bind material/textures if needed
 
+      shader->setToClipFromObject(toClipFromObject);
       // Set model matrix uniform if using shaders
       // GLint modelLoc = glGetUniformLocation(shaderProgram_, "u_ModelMatrix");
       // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, localMatrix.Data());
@@ -190,6 +257,6 @@ void GltfRenderer::DrawNode(int nodeIndex, const r3::Matrix4f& parentMatrix) {
   }
 
   for (int child : node.children) {
-    DrawNode(child, localMatrix);
+    DrawNode(child, toClipFromObject, shader);
   }
 }

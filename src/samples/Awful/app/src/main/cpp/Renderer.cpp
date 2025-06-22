@@ -42,8 +42,8 @@ using namespace std;
 
 // Vertex shader, you'd typically load this from assets
 static const char* vertex = R"vertex(#version 300 es
-in vec3 inPosition;
-in vec2 inUV;
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec2 inUV;
 
 out vec2 fragUV;
 
